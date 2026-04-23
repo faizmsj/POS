@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source "../**/*.blade.php";
+@source "../**/*.js";
+@source "../**/*.vue";
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    body {
+        font-family: var(--font-sans);
+    }
+}
+
+@layer components {
+    .pos-body {
+        background-color: #f4f7fb;
+    }
+
+    .pos-panel {
+        @apply rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6;
+    }
+
+    .pos-stack-card {
+        @apply rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.05)] sm:p-5;
+    }
+
+    .pos-form-input {
+        @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none;
+    }
+
+    .pos-kpi-card {
+        @apply rounded-[28px] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.12)];
+    }
+
+    .pos-kpi-label {
+        @apply text-xs font-semibold uppercase tracking-[0.22em];
+    }
+
+    .pos-nav-link {
+        @apply flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-950;
+    }
+
+    .pos-nav-link.is-active {
+        @apply bg-gradient-to-r from-blue-600 to-cyan-400 text-white shadow-[0_12px_28px_rgba(37,99,235,0.28)];
+    }
+
+    .pos-mobile-link {
+        @apply rounded-2xl px-2 py-3 text-center text-[11px] font-semibold text-slate-500 transition sm:px-3 sm:text-xs;
+    }
+
+    .pos-mobile-link.is-active {
+        @apply bg-slate-950 text-white;
+    }
+}
