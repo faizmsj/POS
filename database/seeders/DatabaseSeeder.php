@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Branch;
+use App\Models\CashierShift;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Purchase;
@@ -232,6 +233,32 @@ class DatabaseSeeder extends Seeder
             'paid_amount' => 30000,
             'status' => 'completed',
             'notes' => 'Seed penjualan demo',
+        ]);
+
+        CashierShift::updateOrCreate([
+            'user_id' => $cashier->id,
+            'branch_id' => $branch->id,
+            'started_at' => now()->copy()->startOfDay()->addHours(8),
+        ], [
+            'opening_balance' => 250000,
+            'closing_balance' => null,
+            'cash_in' => 30000,
+            'cash_out' => 5000,
+            'ended_at' => null,
+            'status' => 'open',
+        ]);
+
+        CashierShift::updateOrCreate([
+            'user_id' => $user->id,
+            'branch_id' => $branchSecondary->id,
+            'started_at' => now()->copy()->subDay()->startOfDay()->addHours(9),
+        ], [
+            'opening_balance' => 300000,
+            'closing_balance' => 415000,
+            'cash_in' => 45000,
+            'cash_out' => 10000,
+            'ended_at' => now()->copy()->subDay()->startOfDay()->addHours(18),
+            'status' => 'closed',
         ]);
 
         SaleItem::updateOrCreate([

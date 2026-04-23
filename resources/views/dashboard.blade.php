@@ -4,7 +4,7 @@
             <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div>
                     <p class="text-sm font-medium text-blue-600">Selamat datang, Administrator Pusat</p>
-                    <h2 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Ringkasan operasional hari ini</h2>
+                    <h2 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Ringkasan operasional dashboard</h2>
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Pantau penjualan, profit FIFO, aktivitas PPOB, loyalty pelanggan, dan status stok multi-cabang dalam satu tampilan.</p>
                 </div>
                 <div class="rounded-[26px] border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
@@ -13,11 +13,43 @@
                 </div>
             </div>
 
+            <form action="{{ route('dashboard') }}" method="GET" class="mt-6 grid gap-4 rounded-[28px] border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">Periode</label>
+                    <select name="period" id="period" class="pos-form-input">
+                        <option value="today" @selected($periodKey === 'today')>Hari Ini</option>
+                        <option value="7days" @selected($periodKey === '7days')>7 Hari Terakhir</option>
+                        <option value="30days" @selected($periodKey === '30days')>30 Hari Terakhir</option>
+                        <option value="month" @selected($periodKey === 'month')>Bulan Ini</option>
+                        <option value="custom" @selected($periodKey === 'custom')>Custom</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">Tanggal Mulai</label>
+                    <input type="date" name="start_date" id="start_date" value="{{ $startDate }}" class="pos-form-input">
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-medium text-slate-700">Tanggal Akhir</label>
+                    <input type="date" name="end_date" id="end_date" value="{{ $endDate }}" class="pos-form-input">
+                </div>
+
+                <div class="flex items-end gap-3">
+                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 lg:w-auto">
+                        Terapkan
+                    </button>
+                    <a href="{{ route('dashboard') }}" class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 lg:w-auto">
+                        Reset
+                    </a>
+                </div>
+            </form>
+
             <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <article class="pos-kpi-card bg-gradient-to-br from-blue-600 via-indigo-500 to-cyan-400 text-white">
                     <div class="pos-kpi-label text-white/75">Penjualan Kotor</div>
                     <div class="mt-3 text-3xl font-semibold">Rp {{ number_format($grossSalesToday, 0, ',', '.') }}</div>
-                    <div class="mt-2 text-sm text-white/80">{{ $transactionCountToday }} transaksi hari ini</div>
+                    <div class="mt-2 text-sm text-white/80">{{ $transactionCountToday }} transaksi pada {{ strtolower($periodLabel) }}</div>
                 </article>
 
                 <article class="pos-kpi-card bg-gradient-to-br from-cyan-500 via-teal-400 to-emerald-400 text-slate-950">
@@ -44,10 +76,10 @@
             <article class="pos-panel xl:col-span-3">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-lg font-semibold text-slate-950">Analisis keuntungan hari ini</h3>
+                        <h3 class="text-lg font-semibold text-slate-950">Analisis keuntungan periode terpilih</h3>
                         <p class="mt-1 text-sm text-slate-500">Simulasi margin dari transaksi yang sudah tercatat dengan referensi batch FIFO.</p>
                     </div>
-                    <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">Live snapshot</span>
+                    <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{{ $periodLabel }}</span>
                 </div>
 
                 <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -98,7 +130,7 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Performa cabang periode ini</h3>
-                        <p class="mt-1 text-sm text-slate-500">Peringkat cabang berdasarkan total penjualan yang tercatat di sistem.</p>
+                        <p class="mt-1 text-sm text-slate-500">Peringkat cabang berdasarkan total penjualan pada periode yang dipilih.</p>
                     </div>
                     <a href="{{ route('branches.index') }}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">Lihat cabang</a>
                 </div>
@@ -124,7 +156,7 @@
                         </div>
                     @empty
                         <div class="md:col-span-2 rounded-[26px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-                            Belum ada data penjualan per cabang untuk periode ini.
+                            Belum ada data penjualan per cabang untuk periode tersebut.
                         </div>
                     @endforelse
                 </div>
@@ -164,7 +196,7 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Transaksi terbaru</h3>
-                        <p class="mt-1 text-sm text-slate-500">Aktivitas penjualan terbaru dari seluruh cabang.</p>
+                        <p class="mt-1 text-sm text-slate-500">Aktivitas penjualan dalam periode yang sedang difilter.</p>
                     </div>
                     <a href="{{ route('sales.index') }}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>
                 </div>
@@ -206,6 +238,7 @@
             <div class="space-y-4">
                 <article class="pos-panel">
                     <h3 class="text-lg font-semibold text-slate-950">Produk terlaris</h3>
+                    <p class="mt-1 text-sm text-slate-500">Ringkasan penjualan produk pada {{ strtolower($periodLabel) }}.</p>
                     <div class="mt-5 space-y-4">
                         @forelse ($topProducts as $item)
                             <div class="flex items-start justify-between gap-3">
@@ -240,7 +273,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Aktivitas PPOB terbaru</h3>
-                        <p class="mt-1 text-sm text-slate-500">Pantau provider, produk, dan status transaksi digital.</p>
+                        <p class="mt-1 text-sm text-slate-500">Pantau provider, produk, dan status transaksi digital pada periode yang dipilih.</p>
                     </div>
                     <a href="{{ route('ppob.transactions.index') }}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">Buka modul</a>
                 </div>
@@ -294,4 +327,27 @@
             </article>
         </section>
     </div>
+
+    <script>
+        (function () {
+            const periodInput = document.getElementById('period');
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+
+            if (!periodInput || !startDateInput || !endDateInput) {
+                return;
+            }
+
+            function toggleCustomFields() {
+                const isCustom = periodInput.value === 'custom';
+                startDateInput.disabled = !isCustom;
+                endDateInput.disabled = !isCustom;
+                startDateInput.classList.toggle('opacity-60', !isCustom);
+                endDateInput.classList.toggle('opacity-60', !isCustom);
+            }
+
+            periodInput.addEventListener('change', toggleCustomFields);
+            toggleCustomFields();
+        })();
+    </script>
 </x-layouts.app>

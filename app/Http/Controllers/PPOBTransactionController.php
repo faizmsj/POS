@@ -12,11 +12,15 @@ class PPOBTransactionController extends Controller
 {
     public function index()
     {
-        $transactions = PPOBTransaction::with(['provider', 'product', 'branch'])->orderByDesc('created_at')->get();
+        $branchIds = $this->accessibleBranchIds();
+        $transactions = PPOBTransaction::with(['provider', 'product', 'branch'])
+            ->whereIn('branch_id', $branchIds)
+            ->orderByDesc('created_at')
+            ->get();
 
         return view('ppob.transactions.index', [
             'transactions' => $transactions,
-            'branches' => Branch::orderBy('name')->get(),
+            'branches' => $this->accessibleBranches()->get(),
             'products' => PPOBProduct::with('provider')->where('is_active', true)->get(),
             'transactionSummary' => [
                 'count' => $transactions->count(),
@@ -34,8 +38,14 @@ class PPOBTransactionController extends Controller
             'product_id' => 'required|exists:ppob_products,id',
         ]);
 
+        $branchId = auth()->user()->hasRole('cashier')
+            ? (int) auth()->user()->branch_id
+            : (int) $request->branch_id;
+
+        $this->ensureBranchAccess($branchId);
+
         $product = PPOBProduct::findOrFail($request->product_id);
-        $transaction = $service->createTransaction($product, $request->branch_id, 1, ['requested_at' => now()->toDateTimeString()]);
+        $transaction = $service->createTransaction($product, $branchId, 1, ['requested_at' => now()->toDateTimeString()]);
         $service->completeTransaction($transaction, ['status' => 'completed', 'metadata' => ['issued_by' => 'system']]);
 
         return redirect()->route('ppob.transactions.index')->with('success', 'Transaksi PPOB berhasil dibuat.');

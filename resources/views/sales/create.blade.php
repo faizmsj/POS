@@ -4,27 +4,34 @@
             <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
                     <p class="text-sm font-medium text-blue-600">POS Kasir</p>
-                    <h2 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Transaksi penjualan cepat</h2>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Tampilan kasir dengan pencarian produk, kartu item berwarna, dan keranjang di sisi kanan seperti mockup POS modern.</p>
+                    <h2 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Transaksi penjualan cepat</h2>
+                    <p class="mt-2 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">Tampilan kasir dengan pencarian produk, foto item, dan keranjang yang tetap nyaman dipakai di desktop maupun mobile.</p>
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-3">
-                    <div class="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
+                <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div class="rounded-[22px] border border-slate-200 bg-slate-50 px-3 py-3 sm:px-4 sm:py-4">
                         <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Cabang</div>
-                        <div class="mt-2 font-semibold text-slate-950" data-active-branch-label>{{ $branches->first()?->name ?? 'Pilih cabang' }}</div>
+                        <div class="mt-2 text-sm font-semibold text-slate-950 sm:text-base" data-active-branch-label>{{ $branches->first()?->name ?? 'Pilih cabang' }}</div>
                     </div>
-                    <div class="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div class="rounded-[22px] border border-slate-200 bg-slate-50 px-3 py-3 sm:px-4 sm:py-4">
                         <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Item</div>
-                        <div class="mt-2 font-semibold text-slate-950" data-cart-count>0 produk</div>
+                        <div class="mt-2 text-sm font-semibold text-slate-950 sm:text-base" data-cart-count>0 produk</div>
                     </div>
-                    <div class="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div class="rounded-[22px] border border-slate-200 bg-slate-50 px-3 py-3 sm:px-4 sm:py-4">
                         <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Total</div>
-                        <div class="mt-2 font-semibold text-slate-950" data-grand-total>Rp 0</div>
+                        <div class="mt-2 text-sm font-semibold text-slate-950 sm:text-base" data-grand-total>Rp 0</div>
                     </div>
                 </div>
             </div>
         </section>
 
+        @if ($branches->isEmpty())
+            <section class="pos-panel">
+                <div class="rounded-[24px] border border-dashed border-amber-200 bg-amber-50 px-5 py-8 text-sm text-amber-800">
+                    Tidak ada cabang yang bisa diakses oleh akun ini. Hubungi admin untuk menghubungkan akun ke cabang yang benar.
+                </div>
+            </section>
+        @else
         <form action="{{ route('sales.store') }}" method="POST" class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_430px] xl:items-start" id="pos-form">
             @csrf
 
@@ -108,7 +115,7 @@
                 </section>
             </div>
 
-            <aside class="pos-panel h-fit xl:sticky xl:top-6 xl:self-start xl:flex xl:max-h-[calc(100vh-8rem)] xl:flex-col xl:overflow-hidden">
+            <aside class="pos-panel h-fit pb-28 sm:pb-32 xl:sticky xl:top-6 xl:self-start xl:flex xl:max-h-[calc(100vh-8rem)] xl:flex-col xl:overflow-hidden xl:pb-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Keranjang</h3>
@@ -123,76 +130,95 @@
                     Pilih produk dari panel kiri untuk mulai transaksi.
                 </div>
 
-                <div class="mt-6 shrink-0 space-y-4 border-t border-slate-200 pt-6">
-                    <div>
-                        <label class="mb-2 block text-sm font-medium text-slate-700">Diskon Transaksi</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            name="discount"
-                            id="discount"
-                            value="{{ old('discount', 0) }}"
-                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
-                        >
-                    </div>
+                <div class="mt-6 shrink-0 border-t border-slate-200 pt-6">
+                    <button
+                        type="button"
+                        id="payment-options-toggle"
+                        class="flex w-full items-center justify-between rounded-[22px] bg-slate-50 px-4 py-4 text-left xl:hidden"
+                        aria-expanded="false"
+                    >
+                        <span>
+                            <span class="block text-sm font-semibold text-slate-950">Opsi Pembayaran</span>
+                            <span class="mt-1 block text-xs text-slate-500">Diskon, pajak, dan jumlah bayar</span>
+                        </span>
+                        <span class="text-lg font-semibold text-slate-500" data-payment-options-icon>+</span>
+                    </button>
 
-                    <div>
-                        <label class="mb-2 block text-sm font-medium text-slate-700">Pajak</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            name="tax"
-                            id="tax"
-                            value="{{ old('tax', 0) }}"
-                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
-                        >
-                    </div>
+                    <div id="payment-options-panel" class="mt-4 hidden space-y-4 xl:block">
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Diskon Transaksi</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                name="discount"
+                                id="discount"
+                                value="{{ old('discount', 0) }}"
+                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
+                            >
+                        </div>
 
-                    <div>
-                        <label class="mb-2 block text-sm font-medium text-slate-700">Jumlah Bayar</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            name="paid_amount"
-                            id="paid_amount"
-                            value="{{ old('paid_amount', 0) }}"
-                            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
-                        >
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Pajak</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                name="tax"
+                                id="tax"
+                                value="{{ old('tax', 0) }}"
+                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Jumlah Bayar</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                name="paid_amount"
+                                id="paid_amount"
+                                value="{{ old('paid_amount', 0) }}"
+                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none"
+                            >
+                        </div>
                     </div>
                 </div>
 
-                <div class="mt-6 shrink-0 space-y-3 rounded-[24px] bg-slate-50 px-4 py-5">
-                    <div class="flex items-center justify-between text-sm text-slate-500">
-                        <span>Subtotal</span>
-                        <span data-subtotal>Rp 0</span>
+                <div class="pos-safe-sticky-mobile sticky z-10 mt-6 -mx-2 rounded-[28px] border border-white/70 bg-white/96 px-2 pb-2 pt-2 shadow-[0_-14px_30px_rgba(15,23,42,0.08)] backdrop-blur xl:static xl:mx-0 xl:rounded-none xl:border-0 xl:bg-transparent xl:px-0 xl:pb-0 xl:pt-0 xl:shadow-none">
+                    <div class="shrink-0 space-y-3 rounded-[24px] bg-slate-50 px-4 py-5">
+                        <div class="flex items-center justify-between text-sm text-slate-500">
+                            <span>Subtotal</span>
+                            <span data-subtotal>Rp 0</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-slate-500">
+                            <span>Diskon</span>
+                            <span data-discount-value>- Rp 0</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-slate-500">
+                            <span>Pajak</span>
+                            <span data-tax-value>Rp 0</span>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-slate-200 pt-3 text-lg font-semibold text-slate-950">
+                            <span>Total</span>
+                            <span data-total>Rp 0</span>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between text-sm text-slate-500">
-                        <span>Diskon</span>
-                        <span data-discount-value>- Rp 0</span>
-                    </div>
-                    <div class="flex items-center justify-between text-sm text-slate-500">
-                        <span>Pajak</span>
-                        <span data-tax-value>Rp 0</span>
-                    </div>
-                    <div class="flex items-center justify-between border-t border-slate-200 pt-3 text-lg font-semibold text-slate-950">
-                        <span>Total</span>
-                        <span data-total>Rp 0</span>
-                    </div>
+
+                    <input type="hidden" name="items_json" id="items_json" value="{{ old('items_json', '[]') }}">
+
+                    <button
+                        type="submit"
+                        id="submit-sale"
+                        class="mt-4 inline-flex w-full shrink-0 items-center justify-center rounded-[24px] bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                    >
+                        Bayar Sekarang
+                    </button>
                 </div>
-
-                <input type="hidden" name="items_json" id="items_json" value="{{ old('items_json', '[]') }}">
-
-                <button
-                    type="submit"
-                    id="submit-sale"
-                    class="mt-6 inline-flex w-full shrink-0 items-center justify-center rounded-[24px] bg-blue-600 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-                >
-                    Bayar Sekarang
-                </button>
             </aside>
         </form>
+        @endif
     </div>
 
+    @if ($branches->isNotEmpty())
     <script>
         (function () {
             const catalog = @json($catalog);
@@ -207,6 +233,9 @@
             const discountInput = document.getElementById('discount');
             const taxInput = document.getElementById('tax');
             const paidAmountInput = document.getElementById('paid_amount');
+            const paymentOptionsToggle = document.getElementById('payment-options-toggle');
+            const paymentOptionsPanel = document.getElementById('payment-options-panel');
+            const paymentOptionsIcon = document.querySelector('[data-payment-options-icon]');
             const itemsJsonInput = document.getElementById('items_json');
             const submitButton = document.getElementById('submit-sale');
             const activeBranchLabel = document.querySelector('[data-active-branch-label]');
@@ -218,14 +247,6 @@
             const totalLabel = document.querySelector('[data-total]');
             const grandTotalLabel = document.querySelector('[data-grand-total]');
             const form = document.getElementById('pos-form');
-
-            const cardClasses = [
-                'bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500',
-                'bg-gradient-to-br from-emerald-500 via-teal-400 to-cyan-400',
-                'bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500',
-                'bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400',
-                'bg-gradient-to-br from-pink-500 via-rose-500 to-red-400',
-            ];
 
             let activeCategory = 'Semua';
             let cart = [];
@@ -260,7 +281,7 @@
 
             function availableProducts() {
                 return catalog
-                    .map((product, index) => {
+                    .map((product) => {
                         const branch = product.branches?.[activeBranchId()];
 
                         if (!branch || Number(branch.stock) <= 0) {
@@ -272,7 +293,6 @@
                             price: Number(branch.price || product.base_price || 0),
                             stock: Number(branch.stock || 0),
                             stockLabel: `${Math.floor(Number(branch.stock || 0))} stok`,
-                            cardClass: cardClasses[index % cardClasses.length],
                         };
                     })
                     .filter(Boolean);
@@ -438,14 +458,16 @@
                     button.type = 'button';
                     button.className = 'group overflow-hidden rounded-[28px] border border-slate-200 bg-white text-left shadow-[0_12px_35px_rgba(15,23,42,0.06)] transition hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(37,99,235,0.16)]';
                     button.innerHTML = `
-                        <div class="${product.cardClass} relative px-5 py-6 text-white">
-                            <div class="absolute right-4 top-4 rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold">${product.stockLabel}</div>
-                            <div class="inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">${product.category}</div>
-                            <div class="mt-8 text-lg font-semibold leading-6">${product.name}</div>
+                        <div class="relative h-40 overflow-hidden bg-slate-100">
+                            <img src="${product.image_url}" alt="${product.name}" class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]">
+                            <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/70 via-slate-950/15 to-transparent"></div>
+                            <div class="absolute right-4 top-4 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-slate-700">${product.stockLabel}</div>
+                            <div class="absolute left-4 top-4 inline-flex rounded-full bg-slate-950/70 px-3 py-1 text-xs font-semibold text-white">${product.category}</div>
                         </div>
                         <div class="flex items-end justify-between gap-3 px-5 py-4">
                             <div>
-                                <div class="text-lg font-semibold text-slate-950">${formatCurrency(product.price)}</div>
+                                <div class="line-clamp-2 text-base font-semibold leading-6 text-slate-950">${product.name}</div>
+                                <div class="mt-2 text-lg font-semibold text-slate-950">${formatCurrency(product.price)}</div>
                                 <div class="mt-1 text-xs text-slate-400">${product.sku ?? ''}</div>
                             </div>
                             <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-lg font-bold text-white transition group-hover:bg-slate-950">+</span>
@@ -541,6 +563,39 @@
                 renderCart();
             });
 
+            if (paymentOptionsToggle && paymentOptionsPanel) {
+                function syncPaymentPanel() {
+                    const desktop = window.innerWidth >= 1280;
+
+                    if (desktop) {
+                        paymentOptionsPanel.classList.remove('hidden');
+                        paymentOptionsToggle.setAttribute('aria-expanded', 'true');
+                        if (paymentOptionsIcon) {
+                            paymentOptionsIcon.textContent = '-';
+                        }
+                        return;
+                    }
+
+                    paymentOptionsPanel.classList.add('hidden');
+                    paymentOptionsToggle.setAttribute('aria-expanded', 'false');
+                    if (paymentOptionsIcon) {
+                        paymentOptionsIcon.textContent = '+';
+                    }
+                }
+
+                paymentOptionsToggle.addEventListener('click', () => {
+                    const isHidden = paymentOptionsPanel.classList.contains('hidden');
+                    paymentOptionsPanel.classList.toggle('hidden', !isHidden);
+                    paymentOptionsToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+                    if (paymentOptionsIcon) {
+                        paymentOptionsIcon.textContent = isHidden ? '-' : '+';
+                    }
+                });
+
+                syncPaymentPanel();
+                window.addEventListener('resize', syncPaymentPanel);
+            }
+
             form.addEventListener('submit', () => {
                 if (Number(paidAmountInput.value || 0) === 0) {
                     paidAmountInput.value = total();
@@ -554,4 +609,5 @@
             renderCart();
         })();
     </script>
+    @endif
 </x-layouts.app>

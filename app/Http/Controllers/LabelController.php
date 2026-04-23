@@ -18,9 +18,15 @@ class LabelController extends Controller
             ->values();
         $copies = max(1, min(12, (int) $request->input('copies', 1)));
 
-        $products = Product::with(['branches.branch', 'category'])->orderBy('name')->get();
-        $branches = Branch::orderBy('name')->get();
-        $selectedBranch = $branches->firstWhere('id', $branchId);
+        $branches = $this->accessibleBranches()->get();
+        $selectedBranchId = $branchId && $branches->contains('id', $branchId)
+            ? $branchId
+            : $branches->first()?->id;
+        $products = Product::with(['branches.branch', 'category'])
+            ->whereHas('branches', fn ($query) => $query->whereIn('branch_id', $branches->pluck('id')))
+            ->orderBy('name')
+            ->get();
+        $selectedBranch = $branches->firstWhere('id', $selectedBranchId);
 
         $selectedProducts = $productIds->isNotEmpty()
             ? $products->whereIn('id', $productIds)->values()
@@ -37,10 +43,10 @@ class LabelController extends Controller
             'products' => $products,
             'selectedProducts' => $selectedProducts,
             'selectedBranch' => $selectedBranch,
-            'selectedBranchId' => $branchId,
+            'selectedBranchId' => $selectedBranchId,
             'copies' => $copies,
-            'labelPreview' => $selectedProducts->map(function (Product $product) use ($branchId, $selectedBranch) {
-                $branchProduct = $product->branches->firstWhere('branch_id', $branchId);
+            'labelPreview' => $selectedProducts->map(function (Product $product) use ($selectedBranchId, $selectedBranch) {
+                $branchProduct = $product->branches->firstWhere('branch_id', $selectedBranchId);
                 $barcodeValue = strtoupper(preg_replace('/[^0-9A-Z\\-\\.\\$\\/\\+% ]/', '', $product->barcode ?: $product->sku ?: 'ITEM'.$product->id));
                 $barcodeValue = trim($barcodeValue) !== '' ? trim($barcodeValue) : 'ITEM'.$product->id;
 

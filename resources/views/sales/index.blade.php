@@ -9,8 +9,9 @@
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <h2 class="text-base sm:text-lg font-semibold">Riwayat Penjualan</h2>
                 <a href="{{ route('sales.create') }}"
-                    class="w-full sm:w-auto text-center rounded-2xl bg-[#111827] px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white hover:bg-[#0f172a] transition">Buat
-                    Penjualan Baru</a>
+                    class="w-full sm:w-auto text-center rounded-2xl bg-[#111827] px-4 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white hover:bg-[#0f172a] transition">
+                    Buat Penjualan Baru
+                </a>
             </div>
 
             <!-- Desktop Table -->

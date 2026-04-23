@@ -14,12 +14,14 @@ class PurchaseController extends Controller
 {
     public function index()
     {
-        $purchases = Purchase::with(['supplier', 'branch', 'batches.product'])->orderByDesc('purchase_date')->get();
+        $purchases = $this->scopeToAccessibleBranches(
+            Purchase::with(['supplier', 'branch', 'batches.product'])->orderByDesc('purchase_date')
+        )->get();
 
         return view('purchases.index', [
             'purchases' => $purchases,
             'suppliers' => Supplier::orderBy('name')->get(),
-            'branches' => Branch::orderBy('name')->get(),
+            'branches' => $this->accessibleBranches()->get(),
             'products' => Product::orderBy('name')->get(),
             'purchaseSummary' => [
                 'count' => $purchases->count(),
@@ -40,6 +42,8 @@ class PurchaseController extends Controller
             'unit_cost' => 'required|numeric|min:0',
             'tax' => 'nullable|numeric|min:0',
         ]);
+
+        $this->ensureBranchAccess((int) $request->branch_id);
 
         $total = $request->quantity * $request->unit_cost;
         $tax = $request->tax ?? 0;

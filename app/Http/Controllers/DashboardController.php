@@ -21,27 +21,48 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $today = Carbon::today();
-        $periodStart = Carbon::now()->startOfMonth();
-        $periodEnd = Carbon::now()->endOfDay();
+        $branchIds = $this->accessibleBranchIds();
+        $period = $request->string('period')->toString() ?: 'month';
+        $periodStartInput = $request->string('start_date')->toString();
+        $periodEndInput = $request->string('end_date')->toString();
 
-        $grossSalesToday = (float) Sale::whereDate('created_at', $today)->sum('total');
-        $transactionCountToday = Sale::whereDate('created_at', $today)->count();
-        $ppobSalesToday = (float) PPOBTransaction::whereDate('created_at', $today)->sum('amount');
-        $pendingPpobToday = PPOBTransaction::whereDate('created_at', $today)
+        [$periodStart, $periodEnd, $periodLabel, $periodKey] = $this->resolvePeriod(
+            $period,
+            $periodStartInput,
+            $periodEndInput
+        );
+
+        $grossSalesToday = (float) $this->scopeToAccessibleBranches(
+            Sale::query()->whereBetween('created_at', [$periodStart, $periodEnd])
+        )->sum('total');
+        $transactionCountToday = $this->scopeToAccessibleBranches(
+            Sale::query()->whereBetween('created_at', [$periodStart, $periodEnd])
+        )->count();
+        $ppobSalesToday = (float) $this->scopeToAccessibleBranches(
+            PPOBTransaction::query()->whereBetween('created_at', [$periodStart, $periodEnd])
+        )->sum('amount');
+        $pendingPpobToday = $this->scopeToAccessibleBranches(
+            PPOBTransaction::query()->whereBetween('created_at', [$periodStart, $periodEnd])
+        )
             ->where('status', '!=', 'success')
             ->count();
-        $loyaltyPointsIssued = (float) CustomerPointHistory::where('type', 'earn')->sum('points');
-        $openShifts = CashierShift::where('status', 'open')->count();
-        $activeBranches = Branch::where('is_active', true)->count();
-        $activeProducts = Product::where('is_active', true)->count();
+        $loyaltyPointsIssued = (float) CustomerPointHistory::where('type', 'earn')
+            ->whereIn('branch_id', $branchIds)
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
+            ->sum('points');
+        $openShifts = CashierShift::where('status', 'open')->whereIn('branch_id', $branchIds)->count();
+        $activeBranches = Branch::where('is_active', true)->whereIn('id', $branchIds)->count();
+        $activeProducts = Product::whereIn('id', ProductBranch::whereIn('branch_id', $branchIds)->pluck('product_id')->unique())->where('is_active', true)->count();
         $lowStockItems = ProductBranch::where('is_active', true)
+            ->whereIn('branch_id', $branchIds)
             ->where('stock', '<=', 10)
             ->count();
-        $stockValue = (float) PurchaseBatch::sum('total_cost');
+        $stockValue = (float) PurchaseBatch::whereIn('branch_id', $branchIds)->sum('total_cost');
 
         $cogsToday = (float) SaleItem::query()
             ->join('purchase_batches', 'sale_items.purchase_batch_id', '=', 'purchase_batches.id')
-            ->whereDate('sale_items.created_at', $today)
+            ->whereIn('sale_items.branch_id', $branchIds)
+            ->whereBetween('sale_items.created_at', [$periodStart, $periodEnd])
             ->sum(DB::raw('sale_items.quantity * purchase_batches.unit_cost'));
 
         $profitToday = $grossSalesToday - $cogsToday;
@@ -49,6 +70,7 @@ class DashboardController extends Controller
         $averageTransaction = $transactionCountToday > 0 ? $grossSalesToday / $transactionCountToday : 0;
 
         $branchPerformance = Branch::query()
+            ->whereIn('id', $branchIds)
             ->withSum([
                 'sales as period_total' => fn ($query) => $query->whereBetween('created_at', [$periodStart, $periodEnd]),
             ], 'total')
@@ -65,6 +87,8 @@ class DashboardController extends Controller
             ->selectRaw('SUM(sale_items.total) as revenue')
             ->selectRaw('SUM(sale_items.quantity * COALESCE(purchase_batches.unit_cost, 0)) as cogs')
             ->leftJoin('purchase_batches', 'sale_items.purchase_batch_id', '=', 'purchase_batches.id')
+            ->whereIn('sale_items.branch_id', $branchIds)
+            ->whereBetween('sale_items.created_at', [$periodStart, $periodEnd])
             ->with('product')
             ->groupBy('sale_items.product_id')
             ->orderByDesc('quantity_sold')
@@ -73,12 +97,16 @@ class DashboardController extends Controller
 
         $recentSales = Sale::query()
             ->with(['branch', 'customer'])
+            ->whereIn('branch_id', $branchIds)
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
             ->latest()
             ->take(6)
             ->get();
 
         $recentPpobTransactions = PPOBTransaction::query()
             ->with(['product', 'provider', 'branch'])
+            ->whereIn('branch_id', $branchIds)
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
             ->latest()
             ->take(4)
             ->get();
@@ -86,15 +114,16 @@ class DashboardController extends Controller
         $stockAlerts = ProductBranch::query()
             ->with(['product', 'branch'])
             ->where('is_active', true)
+            ->whereIn('branch_id', $branchIds)
             ->orderBy('stock')
             ->take(5)
             ->get();
 
         return view('dashboard', [
-            'branches' => Branch::count(),
-            'products' => Product::count(),
+            'branches' => Branch::whereIn('id', $branchIds)->count(),
+            'products' => Product::whereIn('id', ProductBranch::whereIn('branch_id', $branchIds)->pluck('product_id')->unique())->count(),
             'customers' => Customer::count(),
-            'sales' => Sale::count(),
+            'sales' => Sale::whereIn('branch_id', $branchIds)->count(),
             'grossSalesToday' => $grossSalesToday,
             'transactionCountToday' => $transactionCountToday,
             'ppobSalesToday' => $ppobSalesToday,
@@ -114,8 +143,73 @@ class DashboardController extends Controller
             'recentSales' => $recentSales,
             'recentPpobTransactions' => $recentPpobTransactions,
             'stockAlerts' => $stockAlerts,
-            'periodLabel' => $periodStart->translatedFormat('d M Y') . ' - ' . $periodEnd->translatedFormat('d M Y'),
+            'periodLabel' => $periodLabel,
+            'periodKey' => $periodKey,
+            'startDate' => $periodStart->toDateString(),
+            'endDate' => $periodEnd->toDateString(),
             'todayLabel' => $today->translatedFormat('l, d F Y'),
         ]);
+    }
+
+    private function resolvePeriod(string $period, string $startDate = '', string $endDate = ''): array
+    {
+        $now = Carbon::now();
+
+        return match ($period) {
+            'today' => [
+                $now->copy()->startOfDay(),
+                $now->copy()->endOfDay(),
+                'Hari Ini',
+                'today',
+            ],
+            '7days' => [
+                $now->copy()->subDays(6)->startOfDay(),
+                $now->copy()->endOfDay(),
+                '7 Hari Terakhir',
+                '7days',
+            ],
+            '30days' => [
+                $now->copy()->subDays(29)->startOfDay(),
+                $now->copy()->endOfDay(),
+                '30 Hari Terakhir',
+                '30days',
+            ],
+            'custom' => $this->resolveCustomPeriod($startDate, $endDate),
+            default => [
+                $now->copy()->startOfMonth(),
+                $now->copy()->endOfDay(),
+                'Bulan Ini',
+                'month',
+            ],
+        };
+    }
+
+    private function resolveCustomPeriod(string $startDate = '', string $endDate = ''): array
+    {
+        $fallbackStart = Carbon::now()->startOfMonth();
+        $fallbackEnd = Carbon::now()->endOfDay();
+
+        try {
+            $start = $startDate !== ''
+                ? Carbon::parse($startDate)->startOfDay()
+                : $fallbackStart->copy();
+            $end = $endDate !== ''
+                ? Carbon::parse($endDate)->endOfDay()
+                : $fallbackEnd->copy();
+        } catch (\Throwable $exception) {
+            $start = $fallbackStart->copy();
+            $end = $fallbackEnd->copy();
+        }
+
+        if ($start->gt($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
+
+        return [
+            $start,
+            $end,
+            $start->translatedFormat('d M Y').' - '.$end->translatedFormat('d M Y'),
+            'custom',
+        ];
     }
 }

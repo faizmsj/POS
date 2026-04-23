@@ -10,7 +10,7 @@ class BranchController extends Controller
     public function index(?Branch $editing = null)
     {
         return view('branches.index', [
-            'branches' => Branch::orderBy('name')->get(),
+            'branches' => $this->accessibleBranches()->get(),
             'editing' => $editing,
         ]);
     }
@@ -36,6 +36,8 @@ class BranchController extends Controller
 
     public function update(Request $request, Branch $branch)
     {
+        $this->ensureBranchAccess((int) $branch->id);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50|unique:branches,code,' . $branch->id,
@@ -50,6 +52,8 @@ class BranchController extends Controller
 
     public function destroy(Branch $branch)
     {
+        $this->ensureBranchAccess((int) $branch->id);
+
         $branch->delete();
 
         return redirect()->route('branches.index')->with('success', 'Cabang berhasil dihapus.');

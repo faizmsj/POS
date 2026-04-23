@@ -14,10 +14,14 @@ class ProductController extends Controller
     public function index(?Product $editing = null)
     {
         $hasCategories = Schema::hasTable('categories');
+        $branchIds = $this->accessibleBranchIds();
 
         return view('products.index', [
-            'products' => Product::with($hasCategories ? ['branches.branch', 'category'] : ['branches.branch'])->orderBy('name')->get(),
-            'branches' => Branch::orderBy('name')->get(),
+            'products' => Product::with($hasCategories ? ['branches.branch', 'category'] : ['branches.branch'])
+                ->whereHas('branches', fn ($query) => $query->whereIn('branch_id', $branchIds))
+                ->orderBy('name')
+                ->get(),
+            'branches' => $this->accessibleBranches()->get(),
             'categories' => $hasCategories ? Category::orderBy('name')->get() : collect(),
             'categoryTableMissing' => ! $hasCategories,
             'editing' => $editing?->load($hasCategories ? ['branches', 'category'] : ['branches']),
@@ -35,6 +39,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'sku' => 'required|string|max:100|unique:products,sku',
             'barcode' => 'nullable|string|max:100',
+            'image_url' => 'nullable|string|max:2048',
             'category_id' => Schema::hasTable('categories') ? 'nullable|exists:categories,id' : 'nullable',
             'cost_price' => 'nullable|numeric|min:0',
             'base_price' => 'nullable|numeric|min:0',
@@ -43,7 +48,18 @@ class ProductController extends Controller
             'selling_price' => 'nullable|numeric|min:0',
         ]);
 
-        $product = Product::create($request->only(['name', 'sku', 'barcode', 'category_id', 'cost_price', 'base_price', 'description']));
+        if ($request->filled('branch_id')) {
+            $this->ensureBranchAccess((int) $request->branch_id);
+        }
+
+        $product = Product::create(array_merge(
+            $request->only(['name', 'sku', 'barcode', 'category_id', 'cost_price', 'base_price', 'description']),
+            [
+                'meta' => [
+                    'image_url' => $request->input('image_url'),
+                ],
+            ]
+        ));
 
         if ($request->filled('branch_id')) {
             ProductBranch::create([
@@ -66,6 +82,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'sku' => 'required|string|max:100|unique:products,sku,' . $product->id,
             'barcode' => 'nullable|string|max:100',
+            'image_url' => 'nullable|string|max:2048',
             'category_id' => $hasCategories ? 'nullable|exists:categories,id' : 'nullable',
             'cost_price' => 'nullable|numeric|min:0',
             'base_price' => 'nullable|numeric|min:0',
@@ -74,7 +91,18 @@ class ProductController extends Controller
             'selling_price' => 'nullable|numeric|min:0',
         ]);
 
-        $product->update($request->only(['name', 'sku', 'barcode', 'category_id', 'cost_price', 'base_price', 'description']));
+        if ($request->filled('branch_id')) {
+            $this->ensureBranchAccess((int) $request->branch_id);
+        }
+
+        $product->update(array_merge(
+            $request->only(['name', 'sku', 'barcode', 'category_id', 'cost_price', 'base_price', 'description']),
+            [
+                'meta' => array_merge($product->meta ?? [], [
+                    'image_url' => $request->input('image_url'),
+                ]),
+            ]
+        ));
 
         if ($request->filled('branch_id')) {
             ProductBranch::updateOrCreate([

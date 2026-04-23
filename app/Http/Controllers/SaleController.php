@@ -17,14 +17,18 @@ class SaleController extends Controller
     public function index()
     {
         return view('sales.index', [
-            'sales' => Sale::with(['branch', 'customer', 'shift'])->orderByDesc('created_at')->get(),
+            'sales' => $this->scopeToAccessibleBranches(
+                Sale::with(['branch', 'customer', 'shift'])->orderByDesc('created_at')
+            )->get(),
         ]);
     }
 
     public function create()
     {
+        $branchIds = $this->accessibleBranchIds();
         $products = Product::with(['branches.branch', 'category'])
             ->where('is_active', true)
+            ->whereHas('branches', fn ($query) => $query->whereIn('branch_id', $branchIds))
             ->orderBy('name')
             ->get();
 
@@ -34,6 +38,7 @@ class SaleController extends Controller
                 'name' => $product->name,
                 'sku' => $product->sku,
                 'barcode' => $product->barcode,
+                'image_url' => $product->image_url,
                 'category' => $product->category?->name ?? 'Umum',
                 'description' => $product->description,
                 'base_price' => (float) $product->base_price,
@@ -53,8 +58,10 @@ class SaleController extends Controller
             'products' => $products,
             'catalog' => $catalog,
             'customers' => Customer::orderBy('name')->get(),
-            'branches' => Branch::orderBy('name')->get(),
-            'cashiers' => User::where('role', 'cashier')->orderBy('name')->get(),
+            'branches' => $this->accessibleBranches()->get(),
+            'cashiers' => auth()->user()->hasRole('cashier')
+                ? User::whereKey(auth()->id())->get()
+                : User::where('role', 'cashier')->whereIn('branch_id', $branchIds)->orderBy('name')->get(),
         ]);
     }
 
@@ -95,9 +102,11 @@ class SaleController extends Controller
         }
 
         try {
+            $this->ensureBranchAccess((int) $validated['branch_id']);
             $branch = Branch::findOrFail($validated['branch_id']);
             $discount = (float) ($validated['discount'] ?? 0);
             $tax = (float) ($validated['tax'] ?? 0);
+            $cashierId = auth()->user()->hasRole('cashier') ? auth()->id() : ($validated['cashier_id'] ?? null);
 
             $productIds = collect($items)->pluck('product_id')->filter()->unique()->values();
             $products = Product::with(['branches' => function ($query) use ($validated) {
@@ -149,13 +158,14 @@ class SaleController extends Controller
                 $tax,
                 $total,
                 $paidAmount,
+                $cashierId,
                 $inventoryService
             ) {
                 $sale = Sale::create([
                     'invoice' => 'PST/' . now()->format('Ymd') . '/' . str_pad((string) (Sale::count() + 1), 4, '0', STR_PAD_LEFT),
                     'branch_id' => $validated['branch_id'],
                     'customer_id' => $validated['customer_id'] ?? null,
-                    'created_by' => $validated['cashier_id'] ?? null,
+                    'created_by' => $cashierId,
                     'subtotal' => $subtotal,
                     'discount' => $totalDiscount,
                     'tax' => $tax,
