@@ -40,6 +40,8 @@ class UserController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        $validated['email'] = strtolower((string) $validated['email']);
+
         if (in_array($validated['role'], ['owner', 'admin'], true)) {
             $validated['branch_id'] = $validated['branch_id'] ?? null;
         }
@@ -60,6 +62,8 @@ class UserController extends Controller
             'role' => 'required|in:'.implode(',', array_keys($this->assignableRoles(auth()->user()))),
             'password' => 'nullable|string|min:6|confirmed',
         ]);
+
+        $validated['email'] = strtolower((string) $validated['email']);
 
         if ((int) $user->id === (int) auth()->id() && $validated['role'] !== $user->role) {
             return redirect()->route('users.index')->with('error', 'Role akun yang sedang Anda gunakan tidak dapat diubah dari halaman ini.');

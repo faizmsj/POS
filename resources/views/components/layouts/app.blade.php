@@ -2,9 +2,18 @@
 <html lang="id">
 
 <head>
+    @php
+        $storeName = \App\Models\Setting::valueOf('store_name', 'POS Kasir');
+        $storeLogo = \App\Models\Setting::assetUrl(\App\Models\Setting::valueOf('store_logo'));
+        $storeFavicon = \App\Models\Setting::assetUrl(\App\Models\Setting::valueOf('store_favicon')) ?: $storeLogo;
+    @endphp
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'POS Kasir' }}</title>
+    <title>{{ $title ?? $storeName }}</title>
+    @if ($storeFavicon)
+        <link rel="icon" type="image/png" href="{{ $storeFavicon }}">
+        <link rel="apple-touch-icon" href="{{ $storeFavicon }}">
+    @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -73,11 +82,15 @@
             <aside class="hidden w-[290px] shrink-0 xl:flex xl:flex-col">
                 <div class="rounded-[30px] border border-white/70 bg-white/86 p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 text-lg font-bold text-white shadow-lg shadow-blue-500/25">
-                            P
+                        <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 text-lg font-bold text-white shadow-lg shadow-blue-500/25">
+                            @if ($storeLogo)
+                                <img src="{{ $storeLogo }}" alt="Logo toko" class="h-full w-full object-contain p-2">
+                            @else
+                                P
+                            @endif
                         </div>
                         <div>
-                            <div class="text-base font-semibold tracking-tight text-slate-900">Kasir Pusat</div>
+                            <div class="text-base font-semibold tracking-tight text-slate-900">{{ $storeName }}</div>
                             <div class="text-sm text-slate-500">POS Multicabang 2026</div>
                         </div>
                     </a>

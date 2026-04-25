@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Setting extends Model
 {
     use HasFactory;
+
+    protected static array $runtimeCache = [];
 
     protected $fillable = [
         'key',
@@ -28,8 +31,32 @@ class Setting extends Model
 
     public function setValueAttribute($value): void
     {
-        $this->attributes['value'] = is_array($value) || is_object($value)
-            ? json_encode($value, JSON_UNESCAPED_UNICODE)
-            : (string) $value;
+        $this->attributes['value'] = json_encode($value, JSON_UNESCAPED_UNICODE);
+    }
+
+    public static function valueOf(string $key, $default = null)
+    {
+        if (array_key_exists($key, static::$runtimeCache)) {
+            return static::$runtimeCache[$key];
+        }
+
+        $setting = static::query()->where('key', $key)->first();
+        $value = $setting?->value ?? $default;
+        static::$runtimeCache[$key] = $value;
+
+        return $value;
+    }
+
+    public static function assetUrl(?string $path): ?string
+    {
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://', 'data:image'])) {
+            return $path;
+        }
+
+        return asset(ltrim($path, '/'));
     }
 }

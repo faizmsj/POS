@@ -47,7 +47,7 @@
             </div>
         </section>
 
-        <form action="{{ route('settings.store') }}" method="POST" class="space-y-6" id="settings-form">
+        <form action="{{ route('settings.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6" id="settings-form">
             @csrf
 
             <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -82,6 +82,7 @@
                                 @php
                                     $config = $fieldMeta[$setting['key']] ?? ['type' => 'text'];
                                     $value = old('settings.'.$setting['key'], is_array($setting['value']) ? json_encode($setting['value'], JSON_UNESCAPED_UNICODE) : $setting['value']);
+                                    $assetUrl = \App\Models\Setting::assetUrl($value);
                                 @endphp
                                 <div class="rounded-[24px] border border-slate-200 bg-white p-4">
                                     <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
@@ -93,7 +94,42 @@
                                     </div>
 
                                     <div class="mt-4">
-                                        @if ($config['type'] === 'toggle')
+                                        @if (in_array($setting['key'], ['store_logo', 'store_favicon'], true))
+                                            <input type="hidden" name="settings[{{ $setting['key'] }}]" value="{{ $value }}">
+                                            @php
+                                                $isFavicon = $setting['key'] === 'store_favicon';
+                                                $inputName = $isFavicon ? 'branding_favicon' : 'branding_logo';
+                                                $previewId = $isFavicon ? 'branding-favicon-preview' : 'branding-logo-preview';
+                                                $widePreviewId = $isFavicon ? 'branding-favicon-wide-preview' : 'branding-logo-wide-preview';
+                                            @endphp
+                                            <div class="grid gap-4 lg:grid-cols-[200px_1fr] lg:items-center">
+                                                <div class="space-y-3">
+                                                    <div class="flex h-28 w-28 items-center justify-center overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50 shadow-sm">
+                                                        @if ($assetUrl)
+                                                            <img id="{{ $previewId }}" src="{{ $assetUrl }}" alt="{{ $setting['label'] }}" class="h-full w-full object-contain p-3">
+                                                        @else
+                                                            <div id="{{ $previewId }}" class="flex h-full w-full items-center justify-center text-4xl font-bold text-blue-600">P</div>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex h-16 w-full items-center justify-center overflow-hidden rounded-[22px] border border-dashed border-slate-200 bg-slate-50">
+                                                        @if ($assetUrl)
+                                                            <img id="{{ $widePreviewId }}" src="{{ $assetUrl }}" alt="{{ $setting['label' ] }} preview" class="h-full w-full object-contain p-2">
+                                                        @else
+                                                            <div id="{{ $widePreviewId }}" class="flex h-full w-full items-center justify-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Preview Rasio</div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                <div class="space-y-3">
+                                                    <div class="text-sm text-slate-500">
+                                                        {{ $isFavicon ? 'Upload icon kecil khusus browser tab. Jika kosong, favicon akan mengikuti logo utama.' : 'Upload logo utama toko. File ini akan dipakai untuk branding aplikasi dan fallback favicon.' }}
+                                                    </div>
+                                                    <input id="setting-{{ $setting['key'] }}" type="file" name="{{ $inputName }}" accept=".png,.jpg,.jpeg,.webp,.svg,.ico" class="pos-form-input" data-image-preview-input data-image-preview-target="#{{ $previewId }}" data-image-preview-wide="#{{ $widePreviewId }}">
+                                                    <div class="text-xs text-slate-400">
+                                                        {{ $isFavicon ? 'Disarankan ikon persegi 64x64 atau SVG sederhana.' : 'Disarankan PNG atau SVG dengan latar transparan. Maksimal 3 MB.' }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @elseif ($config['type'] === 'toggle')
                                             <label class="flex items-center justify-between rounded-[20px] bg-slate-50 px-4 py-4">
                                                 <span class="text-sm font-medium text-slate-700">Aktifkan opsi ini</span>
                                                 <input

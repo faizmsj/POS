@@ -32,7 +32,13 @@
     <div class="receipt-shell">
         <div style="text-align:center;">
             @if ($receiptSettings['show_logo'])
-                <div style="font-size:28px; font-weight:800; color:#2563eb;">P</div>
+                @if (!empty($receiptSettings['store_logo']))
+                    <div style="margin-bottom:8px;">
+                        <img src="{{ $receiptSettings['store_logo'] }}" alt="Logo toko" style="max-width:72px; max-height:72px; object-fit:contain;">
+                    </div>
+                @else
+                    <div style="font-size:28px; font-weight:800; color:#2563eb;">P</div>
+                @endif
             @endif
             <div class="title">{{ $receiptSettings['store_name'] }}</div>
             <div class="muted">{{ $sale->branch?->name }}</div>

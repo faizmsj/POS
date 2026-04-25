@@ -125,7 +125,8 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input type="email" name="email" value="{{ old('email', $editing?->email) }}" class="pos-form-input" required>
+                    <input type="email" name="email" value="{{ old('email', $editing?->email) }}" class="pos-form-input" required inputmode="email" data-validate-email="#user-email-feedback">
+                    <div id="user-email-feedback" class="mt-2 text-xs text-slate-500">Gunakan email aktif yang valid.</div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Role</label>
@@ -146,12 +147,22 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">{{ $editing ? 'Password Baru' : 'Password' }}</label>
+                    <div class="mb-2 flex justify-end">
+                        <button type="button" data-generate-password="#user-password" data-generate-password-confirm="#user-password-confirmation" class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
+                            Buat Password Otomatis
+                        </button>
+                    </div>
                     <div class="relative">
-                        <input id="user-password" type="password" name="password" class="pos-form-input pr-24" {{ $editing ? '' : 'required' }}>
+                        <input id="user-password" type="password" name="password" class="pos-form-input pr-24" {{ $editing ? '' : 'required' }} data-password-strength-input data-password-strength-target="#user-password-feedback" data-password-strength-bar="#user-password-strength-bar" data-capslock-target="#user-capslock-feedback">
                         <button type="button" data-password-toggle="#user-password" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
                             Lihat
                         </button>
                     </div>
+                    <div id="user-capslock-feedback" class="mt-2 text-xs text-slate-500"></div>
+                    <div class="mt-3 h-2 rounded-full bg-slate-100">
+                        <div id="user-password-strength-bar" class="h-2 rounded-full bg-slate-200 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <div id="user-password-feedback" class="mt-2 text-xs text-slate-500">Masukkan minimal 6 karakter.</div>
                     @if ($editing)
                         <p class="mt-1 text-xs text-slate-500">Kosongkan jika tidak ingin mengganti password.</p>
                     @endif
@@ -159,11 +170,12 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Konfirmasi Password</label>
                     <div class="relative">
-                        <input id="user-password-confirmation" type="password" name="password_confirmation" class="pos-form-input pr-24" {{ $editing ? '' : 'required' }}>
+                        <input id="user-password-confirmation" type="password" name="password_confirmation" class="pos-form-input pr-24" {{ $editing ? '' : 'required' }} data-password-confirm-input="#user-password" data-password-confirm-target="#user-password-confirmation-feedback">
                         <button type="button" data-password-toggle="#user-password-confirmation" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
                             Lihat
                         </button>
                     </div>
+                    <div id="user-password-confirmation-feedback" class="mt-2 text-xs text-slate-500">Ulangi password yang sama.</div>
                 </div>
                 <div class="pos-modal-actions">
                     <button type="button" data-modal-close class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Tutup</button>

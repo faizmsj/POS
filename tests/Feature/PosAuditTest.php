@@ -132,6 +132,20 @@ class PosAuditTest extends TestCase
         $response->assertSee((string) $branchA->name);
     }
 
+    public function test_setting_scalar_values_are_stored_as_valid_json(): void
+    {
+        $setting = Setting::create([
+            'key' => 'store_name',
+            'value' => 'Kasir Pusat Store',
+            'group' => 'Umum',
+        ]);
+
+        $this->assertSame('Kasir Pusat Store', $setting->fresh()->value);
+        $this->assertDatabaseHas('settings', [
+            'key' => 'store_name',
+        ]);
+    }
+
     public function test_cashier_checkout_requires_open_shift_and_valid_paid_amount(): void
     {
         $branch = Branch::create([

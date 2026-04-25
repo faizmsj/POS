@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
+    private const PHONE_RULE = ['nullable', 'string', 'regex:/^[0-9+\-\s()]{8,20}$/'];
+
     public function index(?Customer $editing = null)
     {
         return view('customers.index', [
@@ -22,28 +24,44 @@ class CustomerController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:50',
+            'phone' => self::PHONE_RULE,
             'code' => 'required|string|max:100|unique:customers,code',
         ]);
 
-        Customer::create($request->only(['name', 'email', 'phone', 'code', 'loyalty_tier']));
+        $validated['email'] = filled($validated['email'] ?? null) ? strtolower((string) $validated['email']) : null;
+
+        Customer::create(array_merge(
+            $request->only(['name', 'code', 'loyalty_tier']),
+            [
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+            ]
+        ));
 
         return redirect()->route('customers.index')->with('success', 'Pelanggan berhasil ditambahkan.');
     }
 
     public function update(Request $request, Customer $customer)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:50',
+            'phone' => self::PHONE_RULE,
             'code' => 'required|string|max:100|unique:customers,code,' . $customer->id,
         ]);
 
-        $customer->update($request->only(['name', 'email', 'phone', 'code', 'loyalty_tier']));
+        $validated['email'] = filled($validated['email'] ?? null) ? strtolower((string) $validated['email']) : null;
+
+        $customer->update(array_merge(
+            $request->only(['name', 'code', 'loyalty_tier']),
+            [
+                'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
+            ]
+        ));
 
         return redirect()->route('customers.index')->with('success', 'Pelanggan berhasil diperbarui.');
     }

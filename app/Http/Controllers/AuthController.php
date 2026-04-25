@@ -28,6 +28,8 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        $credentials['email'] = strtolower((string) $credentials['email']);
+
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()
                 ->withInput($request->only('email'))
@@ -49,6 +51,8 @@ class AuthController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'password' => 'required|string|min:6|confirmed',
         ]);
+
+        $validated['email'] = strtolower((string) $validated['email']);
 
         $user = User::create([
             'name' => $validated['name'],

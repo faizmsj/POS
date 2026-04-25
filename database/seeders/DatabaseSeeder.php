@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
         $branches = collect([
             [
                 'code' => 'KSP001',
-                'name' => 'Kasir Pusat',
+                'name' => 'Cabang Pusat',
                 'address' => 'Jalan Pahlawan No. 1',
                 'phone' => '+6281234567890',
             ],
@@ -83,7 +83,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'email' => 'cashier@example.com',
-                'name' => 'Kasir Pusat',
+                'name' => 'Kasir Cabang Pusat',
                 'role' => 'cashier',
                 'branch_code' => 'KSP001',
             ],
@@ -287,7 +287,7 @@ class DatabaseSeeder extends Seeder
         });
 
         foreach ([
-            ['key' => 'store_name', 'value' => 'Kasir Pusat Store', 'group' => 'Umum'],
+            ['key' => 'store_name', 'value' => 'Cabang Pusat Store', 'group' => 'Umum'],
             ['key' => 'invoice_prefix', 'value' => 'PST', 'group' => 'POS'],
             ['key' => 'default_tax_percent', 'value' => '11', 'group' => 'POS'],
             ['key' => 'loyalty_enabled', 'value' => '1', 'group' => 'Loyalty'],

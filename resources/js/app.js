@@ -91,6 +91,226 @@ function initPasswordToggles() {
     });
 }
 
+function generatePassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+    const length = 12;
+    const bytes = new Uint32Array(length);
+    window.crypto.getRandomValues(bytes);
+
+    return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join('');
+}
+
+function initRealtimeAuthFeedback() {
+    const emailInputs = document.querySelectorAll('[data-validate-email]');
+    const phoneInputs = document.querySelectorAll('[data-validate-phone]');
+    const passwordInputs = document.querySelectorAll('[data-password-strength-input]');
+    const confirmInputs = document.querySelectorAll('[data-password-confirm-input]');
+    const capsLockInputs = document.querySelectorAll('[data-capslock-target]');
+    const generatorButtons = document.querySelectorAll('[data-generate-password]');
+
+    emailInputs.forEach((input) => {
+        const feedback = document.querySelector(input.dataset.validateEmail);
+
+        if (!feedback) {
+            return;
+        }
+
+        const syncEmail = () => {
+            if (!input.value) {
+                feedback.textContent = 'Gunakan format email aktif yang bisa dipakai untuk login.';
+                feedback.className = 'mt-2 text-xs text-slate-500';
+                return;
+            }
+
+            const valid = input.checkValidity();
+            feedback.textContent = valid ? 'Format email terlihat valid.' : 'Format email belum valid.';
+            feedback.className = `mt-2 text-xs ${valid ? 'text-emerald-600' : 'text-rose-600'}`;
+        };
+
+        input.addEventListener('input', syncEmail);
+        syncEmail();
+    });
+
+    phoneInputs.forEach((input) => {
+        const feedback = document.querySelector(input.dataset.validatePhone);
+
+        if (!feedback) {
+            return;
+        }
+
+        const syncPhone = () => {
+            if (!input.value) {
+                feedback.textContent = 'Gunakan nomor aktif 8-20 digit, boleh memakai +, spasi, atau tanda minus.';
+                feedback.className = 'mt-2 text-xs text-slate-500';
+                return;
+            }
+
+            const valid = /^[0-9+\-\s()]{8,20}$/.test(input.value);
+            feedback.textContent = valid ? 'Format nomor telepon terlihat valid.' : 'Format nomor telepon belum valid.';
+            feedback.className = `mt-2 text-xs ${valid ? 'text-emerald-600' : 'text-rose-600'}`;
+        };
+
+        input.addEventListener('input', syncPhone);
+        syncPhone();
+    });
+
+    passwordInputs.forEach((input) => {
+        const feedback = document.querySelector(input.dataset.passwordStrengthTarget);
+        const bar = document.querySelector(input.dataset.passwordStrengthBar);
+
+        if (!feedback || !bar) {
+            return;
+        }
+
+        const syncStrength = () => {
+            const value = input.value || '';
+            let score = 0;
+
+            if (value.length >= 6) score += 1;
+            if (value.length >= 10) score += 1;
+            if (/[A-Z]/.test(value)) score += 1;
+            if (/[0-9]/.test(value)) score += 1;
+            if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+            let label = 'Masukkan minimal 6 karakter.';
+            let barClass = 'bg-slate-200';
+            let width = '0%';
+
+            if (value.length > 0) {
+                if (score <= 2) {
+                    label = 'Kekuatan password: lemah';
+                    barClass = 'bg-rose-500';
+                    width = '33%';
+                } else if (score <= 4) {
+                    label = 'Kekuatan password: sedang';
+                    barClass = 'bg-amber-500';
+                    width = '66%';
+                } else {
+                    label = 'Kekuatan password: kuat';
+                    barClass = 'bg-emerald-500';
+                    width = '100%';
+                }
+            }
+
+            feedback.textContent = label;
+            feedback.className = `mt-2 text-xs ${score >= 5 ? 'text-emerald-600' : score >= 3 ? 'text-amber-600' : 'text-slate-500'}`;
+            bar.className = `h-2 rounded-full transition-all duration-300 ${barClass}`;
+            bar.style.width = width;
+        };
+
+        input.addEventListener('input', syncStrength);
+        syncStrength();
+    });
+
+    confirmInputs.forEach((input) => {
+        const passwordInput = document.querySelector(input.dataset.passwordConfirmInput);
+        const feedback = document.querySelector(input.dataset.passwordConfirmTarget);
+
+        if (!passwordInput || !feedback) {
+            return;
+        }
+
+        const syncConfirmation = () => {
+            if (!input.value) {
+                feedback.textContent = 'Ulangi password yang sama.';
+                feedback.className = 'mt-2 text-xs text-slate-500';
+                return;
+            }
+
+            const matches = input.value === passwordInput.value;
+            feedback.textContent = matches ? 'Konfirmasi password sudah cocok.' : 'Konfirmasi password belum cocok.';
+            feedback.className = `mt-2 text-xs ${matches ? 'text-emerald-600' : 'text-rose-600'}`;
+        };
+
+        input.addEventListener('input', syncConfirmation);
+        passwordInput.addEventListener('input', syncConfirmation);
+        syncConfirmation();
+    });
+
+    capsLockInputs.forEach((input) => {
+        const feedback = document.querySelector(input.dataset.capslockTarget);
+
+        if (!feedback) {
+            return;
+        }
+
+        const setCapsState = (active) => {
+            feedback.textContent = active ? 'Caps Lock aktif.' : '';
+            feedback.className = `mt-2 text-xs ${active ? 'text-amber-600' : 'text-slate-500'}`;
+        };
+
+        input.addEventListener('keydown', (event) => {
+            setCapsState(event.getModifierState && event.getModifierState('CapsLock'));
+        });
+
+        input.addEventListener('keyup', (event) => {
+            setCapsState(event.getModifierState && event.getModifierState('CapsLock'));
+        });
+
+        input.addEventListener('blur', () => setCapsState(false));
+    });
+
+    generatorButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const passwordInput = document.querySelector(button.dataset.generatePassword);
+            const confirmationInput = document.querySelector(button.dataset.generatePasswordConfirm || '');
+
+            if (!passwordInput) {
+                return;
+            }
+
+            const password = generatePassword();
+            passwordInput.value = password;
+
+            if (confirmationInput) {
+                confirmationInput.value = password;
+                confirmationInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    });
+}
+
+function initImagePreviews() {
+    document.querySelectorAll('[data-image-preview-input]').forEach((input) => {
+        input.addEventListener('change', () => {
+            const file = input.files?.[0];
+            const target = document.querySelector(input.dataset.imagePreviewTarget || '');
+            const wideTarget = document.querySelector(input.dataset.imagePreviewWide || '');
+
+            if (!file || !target || !wideTarget) {
+                return;
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+
+            [target, wideTarget].forEach((element) => {
+                if (element.tagName !== 'IMG') {
+                    const image = document.createElement('img');
+                    image.id = element.id;
+                    image.alt = 'Preview asset';
+                    image.className = element === target
+                        ? 'h-full w-full object-contain p-3'
+                        : 'h-full w-full object-contain p-2';
+                    element.replaceWith(image);
+                }
+            });
+
+            const refreshedTarget = document.querySelector(input.dataset.imagePreviewTarget || '');
+            const refreshedWideTarget = document.querySelector(input.dataset.imagePreviewWide || '');
+
+            if (refreshedTarget) {
+                refreshedTarget.src = objectUrl;
+            }
+
+            if (refreshedWideTarget) {
+                refreshedWideTarget.src = objectUrl;
+            }
+        });
+    });
+}
+
 async function initDashboardChart() {
     const chartElement = document.getElementById('sales-trend-chart');
 
@@ -289,5 +509,7 @@ async function initDashboardChart() {
 document.addEventListener('DOMContentLoaded', () => {
     initPageModals();
     initPasswordToggles();
+    initRealtimeAuthFeedback();
+    initImagePreviews();
     initDashboardChart();
 });

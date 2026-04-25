@@ -103,11 +103,13 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input type="email" name="email" value="{{ old('email', $editing?->email) }}" class="pos-form-input">
+                    <input type="email" name="email" value="{{ old('email', $editing?->email) }}" class="pos-form-input" inputmode="email" data-validate-email="#customer-email-feedback">
+                    <div id="customer-email-feedback" class="mt-2 text-xs text-slate-500">Gunakan email aktif jika pelanggan ingin menerima komunikasi digital.</div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Telepon</label>
-                    <input type="text" name="phone" value="{{ old('phone', $editing?->phone) }}" class="pos-form-input">
+                    <input type="tel" name="phone" value="{{ old('phone', $editing?->phone) }}" class="pos-form-input" inputmode="tel" pattern="[0-9+\-\s()]{8,20}" data-validate-phone="#customer-phone-feedback">
+                    <div id="customer-phone-feedback" class="mt-2 text-xs text-slate-500">Gunakan nomor aktif 8-20 digit, boleh memakai +, spasi, atau tanda minus.</div>
                 </div>
                 <div class="pos-modal-actions">
                     <button type="button" data-modal-close class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Tutup</button>
