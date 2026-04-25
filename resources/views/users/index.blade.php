@@ -146,14 +146,24 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">{{ $editing ? 'Password Baru' : 'Password' }}</label>
-                    <input type="password" name="password" class="pos-form-input" {{ $editing ? '' : 'required' }}>
+                    <div class="relative">
+                        <input id="user-password" type="password" name="password" class="pos-form-input pr-24" {{ $editing ? '' : 'required' }}>
+                        <button type="button" data-password-toggle="#user-password" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+                            Lihat
+                        </button>
+                    </div>
                     @if ($editing)
                         <p class="mt-1 text-xs text-slate-500">Kosongkan jika tidak ingin mengganti password.</p>
                     @endif
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Konfirmasi Password</label>
-                    <input type="password" name="password_confirmation" class="pos-form-input" {{ $editing ? '' : 'required' }}>
+                    <div class="relative">
+                        <input id="user-password-confirmation" type="password" name="password_confirmation" class="pos-form-input pr-24" {{ $editing ? '' : 'required' }}>
+                        <button type="button" data-password-toggle="#user-password-confirmation" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+                            Lihat
+                        </button>
+                    </div>
                 </div>
                 <div class="pos-modal-actions">
                     <button type="button" data-modal-close class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Tutup</button>

@@ -50,6 +50,31 @@ class PosAuditTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_guest_can_register_cashier_account(): void
+    {
+        $branch = Branch::create([
+            'name' => 'Kasir Pusat',
+            'code' => 'KSP001',
+            'is_active' => true,
+        ]);
+
+        $response = $this->post('/register', [
+            'name' => 'Kasir Baru',
+            'email' => 'kasirbaru@example.com',
+            'branch_id' => $branch->id,
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertAuthenticated();
+        $this->assertDatabaseHas('users', [
+            'email' => 'kasirbaru@example.com',
+            'role' => 'cashier',
+            'branch_id' => $branch->id,
+        ]);
+    }
+
     public function test_dashboard_can_filter_by_branch_and_render_sales_trend(): void
     {
         $branchA = Branch::create([

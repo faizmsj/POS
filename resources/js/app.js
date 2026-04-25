@@ -74,6 +74,23 @@ function initPageModals() {
     });
 }
 
+function initPasswordToggles() {
+    document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const input = document.querySelector(button.dataset.passwordToggle);
+
+            if (!input) {
+                return;
+            }
+
+            const showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            button.textContent = showing ? 'Lihat' : 'Sembunyikan';
+            button.setAttribute('aria-pressed', showing ? 'false' : 'true');
+        });
+    });
+}
+
 async function initDashboardChart() {
     const chartElement = document.getElementById('sales-trend-chart');
 
@@ -271,5 +288,6 @@ async function initDashboardChart() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initPageModals();
+    initPasswordToggles();
     initDashboardChart();
 });

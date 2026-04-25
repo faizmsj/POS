@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login POS</title>
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.14),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(251,146,60,0.14),_transparent_24%),linear-gradient(180deg,_#eef4ff_0%,_#f8fafc_42%,_#fdfdfd_100%)] text-slate-900 antialiased">
@@ -59,7 +59,12 @@
 
                         <div>
                             <label class="mb-2 block text-sm font-medium text-slate-700">Password</label>
-                            <input type="password" name="password" class="pos-form-input" placeholder="Masukkan password" required>
+                            <div class="relative">
+                                <input id="login-password" type="password" name="password" class="pos-form-input pr-24" placeholder="Masukkan password" required>
+                                <button type="button" data-password-toggle="#login-password" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+                                    Lihat
+                                </button>
+                            </div>
                         </div>
 
                         <label class="flex items-center gap-3 rounded-[20px] bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -71,6 +76,11 @@
                             Masuk
                         </button>
                     </form>
+
+                    <div class="mt-4 text-center text-sm text-slate-500">
+                        Belum punya akun?
+                        <a href="{{ route('register') }}" class="font-semibold text-blue-600 hover:text-blue-700">Daftar user baru</a>
+                    </div>
 
                     <div class="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
                         <div class="font-semibold text-slate-900">Akun demo</div>
