@@ -21,7 +21,10 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $today = Carbon::today();
-        $branchIds = $this->accessibleBranchIds();
+        $accessibleBranchIds = $this->accessibleBranchIds();
+        $branchId = $request->integer('branch_id');
+        $selectedBranchId = $branchId && $accessibleBranchIds->contains($branchId) ? $branchId : null;
+        $branchIds = $selectedBranchId ? collect([$selectedBranchId]) : $accessibleBranchIds;
         $period = $request->string('period')->toString() ?: 'month';
         $periodStartInput = $request->string('start_date')->toString();
         $periodEndInput = $request->string('end_date')->toString();
@@ -119,7 +122,11 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $salesTrend = $this->buildSalesTrend($branchIds->all());
+
         return view('dashboard', [
+            'branchOptions' => $this->accessibleBranches()->get(),
+            'selectedBranchId' => $selectedBranchId,
             'branches' => Branch::whereIn('id', $branchIds)->count(),
             'products' => Product::whereIn('id', ProductBranch::whereIn('branch_id', $branchIds)->pluck('product_id')->unique())->count(),
             'customers' => Customer::count(),
@@ -143,6 +150,9 @@ class DashboardController extends Controller
             'recentSales' => $recentSales,
             'recentPpobTransactions' => $recentPpobTransactions,
             'stockAlerts' => $stockAlerts,
+            'salesTrend' => $salesTrend['points'],
+            'salesTrendPath' => $salesTrend['path'],
+            'salesTrendAreaPath' => $salesTrend['area_path'],
             'periodLabel' => $periodLabel,
             'periodKey' => $periodKey,
             'startDate' => $periodStart->toDateString(),
@@ -211,5 +221,97 @@ class DashboardController extends Controller
             $start->translatedFormat('d M Y').' - '.$end->translatedFormat('d M Y'),
             'custom',
         ];
+    }
+
+    private function buildSalesTrend(array $branchIds): array
+    {
+        $start = Carbon::now()->subDays(6)->startOfDay();
+        $end = Carbon::now()->endOfDay();
+
+        $salesByDate = Sale::query()
+            ->selectRaw('DATE(created_at) as sale_date, SUM(total) as total_sales, COUNT(*) as total_transactions')
+            ->whereIn('branch_id', $branchIds)
+            ->whereBetween('created_at', [$start, $end])
+            ->groupBy('sale_date')
+            ->orderBy('sale_date')
+            ->get()
+            ->keyBy('sale_date');
+
+        $points = collect(range(0, 6))->map(function (int $offset) use ($start, $salesByDate) {
+            $date = $start->copy()->addDays($offset);
+            $row = $salesByDate->get($date->toDateString());
+
+            return [
+                'date' => $date->toDateString(),
+                'label' => $date->translatedFormat('d M'),
+                'day' => $date->translatedFormat('D'),
+                'sales' => (float) ($row->total_sales ?? 0),
+                'transactions' => (int) ($row->total_transactions ?? 0),
+            ];
+        });
+
+        return [
+            'points' => $points,
+            'path' => $this->buildSmoothPath($points),
+            'area_path' => $this->buildSmoothAreaPath($points),
+        ];
+    }
+
+    private function buildSmoothPath($points): string
+    {
+        $coordinates = $this->trendCoordinates($points);
+
+        if ($coordinates->isEmpty()) {
+            return '';
+        }
+
+        if ($coordinates->count() === 1) {
+            $point = $coordinates->first();
+
+            return "M {$point['x']} {$point['y']}";
+        }
+
+        $path = "M {$coordinates[0]['x']} {$coordinates[0]['y']}";
+
+        for ($i = 0; $i < $coordinates->count() - 1; $i++) {
+            $current = $coordinates[$i];
+            $next = $coordinates[$i + 1];
+            $controlX = round(($current['x'] + $next['x']) / 2, 2);
+
+            $path .= " C {$controlX} {$current['y']}, {$controlX} {$next['y']}, {$next['x']} {$next['y']}";
+        }
+
+        return $path;
+    }
+
+    private function buildSmoothAreaPath($points): string
+    {
+        $coordinates = $this->trendCoordinates($points);
+
+        if ($coordinates->isEmpty()) {
+            return '';
+        }
+
+        $linePath = $this->buildSmoothPath($points);
+        $first = $coordinates->first();
+        $last = $coordinates->last();
+
+        return "{$linePath} L {$last['x']} 172 L {$first['x']} 172 Z";
+    }
+
+    private function trendCoordinates($points)
+    {
+        $trendMax = max(1, (float) $points->max('sales'));
+        $count = max(1, $points->count() - 1);
+
+        return $points->values()->map(function (array $point, int $index) use ($count, $trendMax) {
+            $x = round(28 + (($index / $count) * 564), 2);
+            $y = round(172 - (($point['sales'] / $trendMax) * 136), 2);
+
+            return [
+                'x' => $x,
+                'y' => $y,
+            ];
+        });
     }
 }

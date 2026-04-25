@@ -47,22 +47,28 @@
             </div>
         </section>
 
-        <form action="{{ route('settings.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('settings.store') }}" method="POST" class="space-y-6" id="settings-form">
             @csrf
 
             <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 @foreach ($settingGroups as $group => $groupSettings)
-                    <a href="#group-{{ \Illuminate\Support\Str::slug($group) }}" class="rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+                    @php
+                        $slug = \Illuminate\Support\Str::slug($group);
+                    @endphp
+                    <button type="button" data-settings-tab="{{ $slug }}" class="pos-settings-tab rounded-[24px] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
                         <div class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{{ $group }}</div>
                         <div class="mt-2 text-2xl font-semibold text-slate-950">{{ $groupSettings->count() }}</div>
                         <div class="mt-1 text-sm text-slate-500">{{ $groupMeta[$group] ?? 'Kelompok pengaturan aplikasi.' }}</div>
-                    </a>
+                    </button>
                 @endforeach
             </section>
 
-            <div class="grid gap-6 xl:grid-cols-2">
+            <div class="space-y-6">
                 @foreach ($settingGroups as $group => $groupSettings)
-                    <section id="group-{{ \Illuminate\Support\Str::slug($group) }}" class="pos-panel">
+                    @php
+                        $slug = \Illuminate\Support\Str::slug($group);
+                    @endphp
+                    <section id="group-{{ $slug }}" data-settings-panel="{{ $slug }}" class="pos-panel hidden">
                         <div class="flex items-center justify-between gap-3">
                             <div>
                                 <h3 class="text-lg font-semibold text-slate-950">{{ $group }}</h3>
@@ -151,4 +157,32 @@
             </div>
         </form>
     </div>
+
+    <script>
+        (function () {
+            const tabButtons = Array.from(document.querySelectorAll('[data-settings-tab]'));
+            const panels = Array.from(document.querySelectorAll('[data-settings-panel]'));
+
+            if (!tabButtons.length || !panels.length) {
+                return;
+            }
+
+            function activateTab(key) {
+                tabButtons.forEach((button) => {
+                    const active = button.dataset.settingsTab === key;
+                    button.classList.toggle('is-active', active);
+                });
+
+                panels.forEach((panel) => {
+                    panel.classList.toggle('hidden', panel.dataset.settingsPanel !== key);
+                });
+            }
+
+            tabButtons.forEach((button) => {
+                button.addEventListener('click', () => activateTab(button.dataset.settingsTab));
+            });
+
+            activateTab(tabButtons[0].dataset.settingsTab);
+        })();
+    </script>
 </x-layouts.app>

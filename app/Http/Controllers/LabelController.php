@@ -23,7 +23,9 @@ class LabelController extends Controller
             ? $branchId
             : $branches->first()?->id;
         $products = Product::with(['branches.branch', 'category'])
-            ->whereHas('branches', fn ($query) => $query->whereIn('branch_id', $branches->pluck('id')))
+            ->whereHas('branches', function ($query) use ($selectedBranchId, $branches) {
+                $query->whereIn('branch_id', $selectedBranchId ? [$selectedBranchId] : $branches->pluck('id'));
+            })
             ->orderBy('name')
             ->get();
         $selectedBranch = $branches->firstWhere('id', $selectedBranchId);

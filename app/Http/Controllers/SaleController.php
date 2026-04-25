@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\CashierShift;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
@@ -106,7 +108,37 @@ class SaleController extends Controller
             $branch = Branch::findOrFail($validated['branch_id']);
             $discount = (float) ($validated['discount'] ?? 0);
             $tax = (float) ($validated['tax'] ?? 0);
-            $cashierId = auth()->user()->hasRole('cashier') ? auth()->id() : ($validated['cashier_id'] ?? null);
+            $selectedCashierId = $validated['cashier_id'] ?? null;
+            $cashierId = auth()->user()->hasRole('cashier') ? auth()->id() : ($selectedCashierId ?: auth()->id());
+            $shouldValidateCashier = auth()->user()->hasRole('cashier') || ! empty($selectedCashierId);
+
+            if ($shouldValidateCashier) {
+                $cashier = User::whereKey($cashierId)
+                    ->where('role', 'cashier')
+                    ->whereIn('branch_id', $this->accessibleBranchIds())
+                    ->first();
+
+                if (! $cashier) {
+                    throw new \InvalidArgumentException('Kasir yang dipilih tidak valid untuk cabang atau akses Anda.');
+                }
+
+                if ((int) $cashier->branch_id !== (int) $validated['branch_id']) {
+                    throw new \InvalidArgumentException('Kasir yang dipilih tidak terhubung ke cabang transaksi ini.');
+                }
+            }
+
+            $activeShift = $shouldValidateCashier
+                ? CashierShift::query()
+                    ->where('user_id', $cashierId)
+                    ->where('branch_id', $validated['branch_id'])
+                    ->where('status', 'open')
+                    ->latest('started_at')
+                    ->first()
+                : null;
+
+            if (auth()->user()->hasRole('cashier') && ! $activeShift) {
+                throw new \InvalidArgumentException('Shift kasir belum dibuka. Buka shift terlebih dahulu sebelum melakukan transaksi.');
+            }
 
             $productIds = collect($items)->pluck('product_id')->filter()->unique()->values();
             $products = Product::with(['branches' => function ($query) use ($validated) {
@@ -149,6 +181,12 @@ class SaleController extends Controller
             $total = max(0, $subtotal - $totalDiscount + $tax);
             $paidAmount = (float) ($validated['paid_amount'] ?? $total);
 
+            if ($paidAmount < $total) {
+                throw new \InvalidArgumentException('Jumlah bayar tidak boleh lebih kecil dari total transaksi.');
+            }
+
+            $invoicePrefix = (string) (Setting::where('key', 'invoice_prefix')->value('value') ?: 'PST');
+
             DB::transaction(function () use (
                 $validated,
                 $branch,
@@ -159,12 +197,15 @@ class SaleController extends Controller
                 $total,
                 $paidAmount,
                 $cashierId,
+                $activeShift,
+                $invoicePrefix,
                 $inventoryService
             ) {
                 $sale = Sale::create([
-                    'invoice' => 'PST/' . now()->format('Ymd') . '/' . str_pad((string) (Sale::count() + 1), 4, '0', STR_PAD_LEFT),
+                    'invoice' => $invoicePrefix . '/' . now()->format('Ymd') . '/' . str_pad((string) (Sale::count() + 1), 4, '0', STR_PAD_LEFT),
                     'branch_id' => $validated['branch_id'],
                     'customer_id' => $validated['customer_id'] ?? null,
+                    'shift_id' => $activeShift?->id,
                     'created_by' => $cashierId,
                     'subtotal' => $subtotal,
                     'discount' => $totalDiscount,
@@ -217,6 +258,7 @@ class SaleController extends Controller
 
     public function receipt(Sale $sale)
     {
+        $this->ensureBranchAccess((int) $sale->branch_id);
         $sale->load(['branch', 'customer', 'items.product']);
 
         $settings = \App\Models\Setting::whereIn('key', [

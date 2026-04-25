@@ -45,7 +45,7 @@ class PPOBTransactionController extends Controller
         $this->ensureBranchAccess($branchId);
 
         $product = PPOBProduct::findOrFail($request->product_id);
-        $transaction = $service->createTransaction($product, $branchId, 1, ['requested_at' => now()->toDateTimeString()]);
+        $transaction = $service->createTransaction($product, $branchId, (int) auth()->id(), ['requested_at' => now()->toDateTimeString()]);
         $service->completeTransaction($transaction, ['status' => 'completed', 'metadata' => ['issued_by' => 'system']]);
 
         return redirect()->route('ppob.transactions.index')->with('success', 'Transaksi PPOB berhasil dibuat.');

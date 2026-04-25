@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
@@ -52,7 +53,11 @@ class Product extends Model
         $imageUrl = $meta['image_url'] ?? null;
 
         if (is_string($imageUrl) && trim($imageUrl) !== '') {
-            return $imageUrl;
+            if (Str::startsWith($imageUrl, ['http://', 'https://', 'data:image'])) {
+                return $imageUrl;
+            }
+
+            return asset(ltrim($imageUrl, '/'));
         }
 
         return $this->placeholderImage();

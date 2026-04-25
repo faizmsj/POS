@@ -1,70 +1,140 @@
 <x-layouts.app :title="'Dashboard POS 2026'">
+    @php
+        $trendMax = max(1, (float) $salesTrend->max('sales'));
+        $dashboardUser = auth()->user();
+        $peakTrend = $salesTrend->sortByDesc('sales')->first();
+        $trendLabels = $salesTrend->pluck('label')->values();
+        $trendSales = $salesTrend->pluck('sales')->map(fn($value) => round((float) $value, 2))->values();
+        $trendTransactions = $salesTrend->pluck('transactions')->values();
+        $chartPalette = $selectedBranchId
+            ? [
+                'primary' => '#14b8a6',
+                'secondary' => '#5eead4',
+                'fillStart' => 'rgba(20, 184, 166, 0.30)',
+                'fillMid' => 'rgba(94, 234, 212, 0.16)',
+                'fillEnd' => 'rgba(20, 184, 166, 0.02)',
+                'surface' => 'bg-teal-50',
+                'text' => 'text-teal-700',
+            ]
+            : [
+                'primary' => '#0ea5e9',
+                'secondary' => '#67e8f9',
+                'fillStart' => 'rgba(56, 189, 248, 0.30)',
+                'fillMid' => 'rgba(125, 211, 252, 0.16)',
+                'fillEnd' => 'rgba(56, 189, 248, 0.02)',
+                'surface' => 'bg-sky-50',
+                'text' => 'text-sky-700',
+            ];
+    @endphp
     <div class="space-y-6">
-        <section class="rounded-[32px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)] backdrop-blur sm:p-6">
+        <section class="pos-dashboard-hero">
             <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                    <p class="text-sm font-medium text-blue-600">Selamat datang, Administrator Pusat</p>
-                    <h2 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Ringkasan operasional dashboard</h2>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Pantau penjualan, profit FIFO, aktivitas PPOB, loyalty pelanggan, dan status stok multi-cabang dalam satu tampilan.</p>
+                    <p class="text-sm font-medium text-sky-700">Selamat datang,
+                        {{ $dashboardUser?->name ?? 'Tim Operasional' }}</p>
+                    <h2 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Ringkasan operasional dashboard
+                    </h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Pantau penjualan, profit FIFO, aktivitas
+                        PPOB, loyalty pelanggan, dan status stok multi-cabang dalam satu tampilan yang lebih ringan
+                        dibaca.</p>
                 </div>
-                <div class="rounded-[26px] border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
+                <div
+                    class="rounded-[26px] border border-white/70 bg-white/75 px-5 py-4 text-sm text-slate-600 shadow-[0_10px_30px_rgba(148,163,184,0.15)]">
                     <div class="font-semibold text-slate-900">{{ $todayLabel }}</div>
                     <div class="mt-1">Periode analitik: {{ $periodLabel }}</div>
                 </div>
             </div>
 
-            <form action="{{ route('dashboard') }}" method="GET" class="mt-6 grid gap-4 rounded-[28px] border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700">Periode</label>
-                    <select name="period" id="period" class="pos-form-input">
-                        <option value="today" @selected($periodKey === 'today')>Hari Ini</option>
-                        <option value="7days" @selected($periodKey === '7days')>7 Hari Terakhir</option>
-                        <option value="30days" @selected($periodKey === '30days')>30 Hari Terakhir</option>
-                        <option value="month" @selected($periodKey === 'month')>Bulan Ini</option>
-                        <option value="custom" @selected($periodKey === 'custom')>Custom</option>
-                    </select>
+            <form action="{{ route('dashboard') }}" method="GET"
+                class="mt-6 rounded-[30px] border border-white/80 bg-white/72 p-4 shadow-[0_12px_32px_rgba(148,163,184,0.12)] backdrop-blur sm:p-5">
+                <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-900">Filter ringkasan</div>
+                        <div class="mt-1 text-sm text-slate-500">Pilih cabang dan periode agar dashboard terasa lebih
+                            fokus.</div>
+                    </div>
+                    <div class="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                        {{ $selectedBranchId ? 'Cabang spesifik' : 'Semua cabang' }}
+                    </div>
                 </div>
 
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700">Tanggal Mulai</label>
-                    <input type="date" name="start_date" id="start_date" value="{{ $startDate }}" class="pos-form-input">
-                </div>
+                <div class="flex flex-col gap-4 xl:flex-row xl:flex-nowrap xl:items-end xl:justify-end">
+                    <div class="grid flex-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Cabang</label>
+                            <select name="branch_id" id="branch_id" class="pos-dashboard-input">
+                                <option value="">Semua cabang</option>
+                                @foreach ($branchOptions as $branch)
+                                    <option value="{{ $branch->id }}" @selected((int) $selectedBranchId === (int) $branch->id)>{{ $branch->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-slate-700">Tanggal Akhir</label>
-                    <input type="date" name="end_date" id="end_date" value="{{ $endDate }}" class="pos-form-input">
-                </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Periode</label>
+                            <select name="period" id="period" class="pos-dashboard-input">
+                                <option value="today" @selected($periodKey === 'today')>Hari Ini</option>
+                                <option value="7days" @selected($periodKey === '7days')>7 Hari Terakhir</option>
+                                <option value="30days" @selected($periodKey === '30days')>30 Hari Terakhir</option>
+                                <option value="month" @selected($periodKey === 'month')>Bulan Ini</option>
+                                <option value="custom" @selected($periodKey === 'custom')>Custom</option>
+                            </select>
+                        </div>
 
-                <div class="flex items-end gap-3">
-                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 lg:w-auto">
-                        Terapkan
-                    </button>
-                    <a href="{{ route('dashboard') }}" class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 lg:w-auto">
-                        Reset
-                    </a>
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Tanggal Mulai</label>
+                            <input type="date" name="start_date" id="start_date" value="{{ $startDate }}"
+                                class="pos-dashboard-input">
+                        </div>
+
+                        <div>
+                            <label class="mb-2 block text-sm font-medium text-slate-700">Tanggal Akhir</label>
+                            <input type="date" name="end_date" id="end_date" value="{{ $endDate }}"
+                                class="pos-dashboard-input">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 xl:shrink-0">
+                        <button type="submit"
+                            class="inline-flex w-full items-center justify-center rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(14,165,233,0.22)] transition hover:bg-sky-700 xl:w-auto">
+                            Terapkan
+                        </button>
+                        <a href="{{ route('dashboard') }}"
+                            class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white/90 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 xl:w-auto">
+                            Reset
+                        </a>
+                    </div>
                 </div>
             </form>
 
             <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <article class="pos-kpi-card bg-gradient-to-br from-blue-600 via-indigo-500 to-cyan-400 text-white">
                     <div class="pos-kpi-label text-white/75">Penjualan Kotor</div>
-                    <div class="mt-3 text-3xl font-semibold">Rp {{ number_format($grossSalesToday, 0, ',', '.') }}</div>
-                    <div class="mt-2 text-sm text-white/80">{{ $transactionCountToday }} transaksi pada {{ strtolower($periodLabel) }}</div>
+                    <div class="mt-3 text-3xl font-semibold">Rp {{ number_format($grossSalesToday, 0, ',', '.') }}
+                    </div>
+                    <div class="mt-2 text-sm text-white/80">{{ $transactionCountToday }} transaksi pada
+                        {{ strtolower($periodLabel) }}</div>
                 </article>
 
-                <article class="pos-kpi-card bg-gradient-to-br from-cyan-500 via-teal-400 to-emerald-400 text-slate-950">
+                <article
+                    class="pos-kpi-card bg-gradient-to-br from-cyan-500 via-teal-400 to-emerald-400 text-slate-950">
                     <div class="pos-kpi-label text-slate-800/70">Transaksi POS</div>
                     <div class="mt-3 text-3xl font-semibold">{{ $transactionCountToday }}</div>
-                    <div class="mt-2 text-sm text-slate-800/80">Rata-rata Rp {{ number_format($averageTransaction, 0, ',', '.') }}</div>
+                    <div class="mt-2 text-sm text-slate-800/80">Rata-rata Rp
+                        {{ number_format($averageTransaction, 0, ',', '.') }}</div>
                 </article>
 
-                <article class="pos-kpi-card bg-gradient-to-br from-emerald-500 via-green-400 to-lime-300 text-slate-950">
+                <article
+                    class="pos-kpi-card bg-gradient-to-br from-emerald-500 via-green-400 to-lime-300 text-slate-950">
                     <div class="pos-kpi-label text-slate-800/70">PPOB Sales</div>
                     <div class="mt-3 text-3xl font-semibold">Rp {{ number_format($ppobSalesToday, 0, ',', '.') }}</div>
-                    <div class="mt-2 text-sm text-slate-800/80">{{ $pendingPpobToday }} transaksi perlu tindak lanjut</div>
+                    <div class="mt-2 text-sm text-slate-800/80">{{ $pendingPpobToday }} transaksi perlu tindak lanjut
+                    </div>
                 </article>
 
-                <article class="pos-kpi-card bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 text-slate-950">
+                <article
+                    class="pos-kpi-card bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 text-slate-950">
                     <div class="pos-kpi-label text-slate-800/70">Pending PPOB</div>
                     <div class="mt-3 text-3xl font-semibold">{{ $pendingPpobToday }}</div>
                     <div class="mt-2 text-sm text-slate-800/80">Monitoring status provider realtime</div>
@@ -77,27 +147,35 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Analisis keuntungan periode terpilih</h3>
-                        <p class="mt-1 text-sm text-slate-500">Simulasi margin dari transaksi yang sudah tercatat dengan referensi batch FIFO.</p>
+                        <p class="mt-1 text-sm text-slate-500">Simulasi margin dari transaksi yang sudah tercatat dengan
+                            referensi batch FIFO.</p>
                     </div>
-                    <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{{ $periodLabel }}</span>
+                    <span
+                        class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{{ $periodLabel }}</span>
                 </div>
 
                 <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div class="rounded-[24px] bg-emerald-50 p-5 ring-1 ring-emerald-100">
-                        <div class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Total Profit</div>
-                        <div class="mt-3 text-2xl font-semibold text-emerald-950">Rp {{ number_format($profitToday, 0, ',', '.') }}</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Total Profit
+                        </div>
+                        <div class="mt-3 text-2xl font-semibold text-emerald-950">Rp
+                            {{ number_format($profitToday, 0, ',', '.') }}</div>
                     </div>
                     <div class="rounded-[24px] bg-blue-50 p-5 ring-1 ring-blue-100">
                         <div class="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">HPP FIFO</div>
-                        <div class="mt-3 text-2xl font-semibold text-blue-950">Rp {{ number_format($cogsToday, 0, ',', '.') }}</div>
+                        <div class="mt-3 text-2xl font-semibold text-blue-950">Rp
+                            {{ number_format($cogsToday, 0, ',', '.') }}</div>
                     </div>
                     <div class="rounded-[24px] bg-amber-50 p-5 ring-1 ring-amber-100">
                         <div class="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">Margin</div>
-                        <div class="mt-3 text-2xl font-semibold text-amber-950">{{ number_format($marginToday, 1) }}%</div>
+                        <div class="mt-3 text-2xl font-semibold text-amber-950">{{ number_format($marginToday, 1) }}%
+                        </div>
                     </div>
                     <div class="rounded-[24px] bg-fuchsia-50 p-5 ring-1 ring-fuchsia-100">
-                        <div class="text-xs font-semibold uppercase tracking-[0.22em] text-fuchsia-700">Loyalty Earned</div>
-                        <div class="mt-3 text-2xl font-semibold text-fuchsia-950">{{ number_format($loyaltyPointsIssued, 0, ',', '.') }} poin</div>
+                        <div class="text-xs font-semibold uppercase tracking-[0.22em] text-fuchsia-700">Loyalty Earned
+                        </div>
+                        <div class="mt-3 text-2xl font-semibold text-fuchsia-950">
+                            {{ number_format($loyaltyPointsIssued, 0, ',', '.') }} poin</div>
                     </div>
                 </div>
             </article>
@@ -117,10 +195,103 @@
                         <span class="text-sm text-slate-500">Shift terbuka</span>
                         <span class="text-lg font-semibold text-slate-950">{{ $openShifts }}</span>
                     </div>
-                    <div class="flex items-center justify-between rounded-[22px] bg-rose-50 px-4 py-4 ring-1 ring-rose-100">
+                    <div
+                        class="flex items-center justify-between rounded-[22px] bg-rose-50 px-4 py-4 ring-1 ring-rose-100">
                         <span class="text-sm text-rose-700">Stok menipis</span>
                         <span class="text-lg font-semibold text-rose-950">{{ $lowStockItems }}</span>
                     </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+            <article class="pos-panel overflow-hidden">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-950">Grafik tren penjualan 7 hari terakhir</h3>
+                        <p class="mt-1 text-sm text-slate-500">Memantau nilai penjualan harian lintas cabang yang bisa
+                            Anda akses dengan visual yang lebih halus.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="inline-flex rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm">
+                            <button type="button" data-chart-mode="sales"
+                                class="chart-mode-toggle is-active rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700">
+                                Penjualan
+                            </button>
+                            <button type="button" data-chart-mode="transactions"
+                                class="chart-mode-toggle rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500">
+                                Transaksi
+                            </button>
+                        </div>
+                        <span
+                            class="rounded-full {{ $chartPalette['surface'] }} px-3 py-1 text-xs font-semibold {{ $chartPalette['text'] }}">7
+                            hari</span>
+                    </div>
+                </div>
+
+                <div
+                    class="mt-5 rounded-[30px] border border-sky-100 bg-[linear-gradient(180deg,_rgba(248,252,255,0.98)_0%,_rgba(240,249,255,0.86)_35%,_rgba(255,255,255,1)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:p-5">
+                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+                        <div class="min-w-0">
+                            <div id="sales-trend-chart" class="h-[260px] w-full min-w-0"
+                                data-chart-labels='@json($trendLabels)'
+                                data-chart-sales='@json($trendSales)'
+                                data-chart-transactions='@json($trendTransactions)'
+                                data-chart-palette='@json($chartPalette)'></div>
+                        </div>
+
+                        <div class="grid gap-3">
+                            <div
+                                class="rounded-[24px] border border-white/80 bg-white/88 p-4 shadow-[0_10px_28px_rgba(148,163,184,0.12)]">
+                                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Total 7
+                                    Hari</div>
+                                <div class="mt-3 text-2xl font-semibold text-slate-950" data-chart-total-sales>Rp
+                                    {{ number_format((float) $salesTrend->sum('sales'), 0, ',', '.') }}</div>
+                                <div class="mt-3 hidden text-2xl font-semibold text-slate-950"
+                                    data-chart-total-transactions>
+                                    {{ number_format((int) $salesTrend->sum('transactions'), 0, ',', '.') }} transaksi
+                                </div>
+                                <div class="mt-2 text-sm text-slate-500" data-chart-total-caption>
+                                    {{ number_format((int) $salesTrend->sum('transactions'), 0, ',', '.') }} transaksi
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[24px] border border-sky-100 bg-[linear-gradient(180deg,_rgba(240,249,255,0.96)_0%,_rgba(236,254,255,0.96)_100%)] p-4 text-slate-900 shadow-[0_10px_28px_rgba(148,163,184,0.1)]">
+                                <div class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/80"
+                                    data-chart-peak-title>Puncak Penjualan</div>
+                                <div class="mt-3 text-xl font-semibold">{{ $peakTrend['label'] ?? '-' }}</div>
+                                <div class="mt-2 text-sm text-slate-600" data-chart-peak-value>Rp
+                                    {{ number_format((float) ($peakTrend['sales'] ?? 0), 0, ',', '.') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="pos-panel">
+                <h3 class="text-lg font-semibold text-slate-950">Ringkasan harian</h3>
+                <p class="mt-1 text-sm text-slate-500">Nilai penjualan per hari untuk 7 hari terakhir.</p>
+                <div class="mt-5 space-y-3">
+                    @foreach ($salesTrend as $point)
+                        @php
+                            $barWidth = min(100, (($point['sales'] ?? 0) / $trendMax) * 100);
+                        @endphp
+                        <div class="rounded-[22px] border border-slate-200 bg-white px-4 py-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <div class="font-semibold text-slate-950">{{ $point['label'] }}</div>
+                                    <div class="mt-1 text-sm text-slate-500">{{ $point['transactions'] }} transaksi
+                                    </div>
+                                </div>
+                                <div class="text-right text-sm font-semibold text-slate-950">Rp
+                                    {{ number_format((float) $point['sales'], 0, ',', '.') }}</div>
+                            </div>
+                            <div class="mt-3 h-2 rounded-full bg-slate-100">
+                                <div class="h-2 rounded-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400"
+                                    style="width: {{ $barWidth }}%"></div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </article>
         </section>
@@ -130,9 +301,11 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Performa cabang periode ini</h3>
-                        <p class="mt-1 text-sm text-slate-500">Peringkat cabang berdasarkan total penjualan pada periode yang dipilih.</p>
+                        <p class="mt-1 text-sm text-slate-500">Peringkat cabang berdasarkan total penjualan pada
+                            periode yang dipilih.</p>
                     </div>
-                    <a href="{{ route('branches.index') }}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">Lihat cabang</a>
+                    <a href="{{ route('branches.index') }}"
+                        class="text-sm font-semibold text-blue-600 hover:text-blue-700">Lihat cabang</a>
                 </div>
 
                 <div class="mt-5 grid gap-4 md:grid-cols-2">
@@ -141,21 +314,26 @@
                             <div class="flex items-start justify-between gap-3">
                                 <div>
                                     <div class="text-sm font-semibold text-slate-950">{{ $branch->name }}</div>
-                                    <div class="mt-1 text-sm text-slate-500">{{ $branch->code }} | {{ $branch->period_transactions }} transaksi</div>
+                                    <div class="mt-1 text-sm text-slate-500">{{ $branch->code }} |
+                                        {{ $branch->period_transactions }} transaksi</div>
                                 </div>
-                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500">#{{ $index + 1 }}</span>
+                                <span
+                                    class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500">#{{ $index + 1 }}</span>
                             </div>
-                            <div class="mt-4 text-2xl font-semibold text-slate-950">Rp {{ number_format((float) $branch->period_total, 0, ',', '.') }}</div>
+                            <div class="mt-4 text-2xl font-semibold text-slate-950">Rp
+                                {{ number_format((float) $branch->period_total, 0, ',', '.') }}</div>
                             <div class="mt-4 h-2 rounded-full bg-slate-200">
                                 @php
                                     $maxTotal = max(1, (float) $branchPerformance->max('period_total'));
                                     $width = min(100, (((float) $branch->period_total) / $maxTotal) * 100);
                                 @endphp
-                                <div class="h-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-400" style="width: {{ $width }}%"></div>
+                                <div class="h-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-400"
+                                    style="width: {{ $width }}%"></div>
                             </div>
                         </div>
                     @empty
-                        <div class="md:col-span-2 rounded-[26px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                        <div
+                            class="md:col-span-2 rounded-[26px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
                             Belum ada data penjualan per cabang untuk periode tersebut.
                         </div>
                     @endforelse
@@ -176,14 +354,18 @@
                         <div class="rounded-[22px] border border-slate-200 bg-white px-4 py-4">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <div class="font-semibold text-slate-950">{{ $alert->product?->name ?? 'Produk' }}</div>
-                                    <div class="mt-1 text-sm text-slate-500">{{ $alert->branch?->name ?? 'Cabang' }}</div>
+                                    <div class="font-semibold text-slate-950">{{ $alert->product?->name ?? 'Produk' }}
+                                    </div>
+                                    <div class="mt-1 text-sm text-slate-500">{{ $alert->branch?->name ?? 'Cabang' }}
+                                    </div>
                                 </div>
-                                <span class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">{{ number_format((float) $alert->stock, 0, ',', '.') }}</span>
+                                <span
+                                    class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">{{ number_format((float) $alert->stock, 0, ',', '.') }}</span>
                             </div>
                         </div>
                     @empty
-                        <div class="rounded-[22px] border border-dashed border-emerald-200 bg-emerald-50 px-4 py-6 text-sm text-emerald-800">
+                        <div
+                            class="rounded-[22px] border border-dashed border-emerald-200 bg-emerald-50 px-4 py-6 text-sm text-emerald-800">
                             Semua stok dalam kondisi aman.
                         </div>
                     @endforelse
@@ -196,9 +378,11 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Transaksi terbaru</h3>
-                        <p class="mt-1 text-sm text-slate-500">Aktivitas penjualan dalam periode yang sedang difilter.</p>
+                        <p class="mt-1 text-sm text-slate-500">Aktivitas penjualan dalam periode yang sedang difilter.
+                        </p>
                     </div>
-                    <a href="{{ route('sales.index') }}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>
+                    <a href="{{ route('sales.index') }}"
+                        class="text-sm font-semibold text-blue-600 hover:text-blue-700">Lihat semua</a>
                 </div>
 
                 <div class="mt-5 overflow-hidden rounded-[26px] border border-slate-200">
@@ -218,15 +402,19 @@
                                     <tr>
                                         <td class="px-4 py-4 font-semibold text-blue-600">{{ $sale->invoice }}</td>
                                         <td class="px-4 py-4 text-slate-600">{{ $sale->branch?->name ?? '-' }}</td>
-                                        <td class="px-4 py-4 text-slate-600">{{ $sale->customer?->name ?? 'Umum' }}</td>
-                                        <td class="px-4 py-4 font-semibold text-slate-950">Rp {{ number_format((float) $sale->total, 0, ',', '.') }}</td>
+                                        <td class="px-4 py-4 text-slate-600">{{ $sale->customer?->name ?? 'Umum' }}
+                                        </td>
+                                        <td class="px-4 py-4 font-semibold text-slate-950">Rp
+                                            {{ number_format((float) $sale->total, 0, ',', '.') }}</td>
                                         <td class="px-4 py-4">
-                                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{{ ucfirst($sale->status) }}</span>
+                                            <span
+                                                class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{{ ucfirst($sale->status) }}</span>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">Belum ada transaksi yang tercatat.</td>
+                                        <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">Belum
+                                            ada transaksi yang tercatat.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -238,17 +426,23 @@
             <div class="space-y-4">
                 <article class="pos-panel">
                     <h3 class="text-lg font-semibold text-slate-950">Produk terlaris</h3>
-                    <p class="mt-1 text-sm text-slate-500">Ringkasan penjualan produk pada {{ strtolower($periodLabel) }}.</p>
+                    <p class="mt-1 text-sm text-slate-500">Ringkasan penjualan produk pada
+                        {{ strtolower($periodLabel) }}.</p>
                     <div class="mt-5 space-y-4">
                         @forelse ($topProducts as $item)
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <div class="font-semibold text-slate-950">{{ $item->product?->name ?? 'Produk tanpa nama' }}</div>
-                                    <div class="mt-1 text-sm text-slate-500">{{ number_format((float) $item->quantity_sold, 0, ',', '.') }} terjual</div>
+                                    <div class="font-semibold text-slate-950">
+                                        {{ $item->product?->name ?? 'Produk tanpa nama' }}</div>
+                                    <div class="mt-1 text-sm text-slate-500">
+                                        {{ number_format((float) $item->quantity_sold, 0, ',', '.') }} terjual</div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="font-semibold text-emerald-700">Rp {{ number_format((float) $item->revenue, 0, ',', '.') }}</div>
-                                    <div class="mt-1 text-sm text-slate-400">Profit Rp {{ number_format(((float) $item->revenue) - ((float) $item->cogs), 0, ',', '.') }}</div>
+                                    <div class="font-semibold text-emerald-700">Rp
+                                        {{ number_format((float) $item->revenue, 0, ',', '.') }}</div>
+                                    <div class="mt-1 text-sm text-slate-400">Profit Rp
+                                        {{ number_format(((float) $item->revenue) - ((float) $item->cogs), 0, ',', '.') }}
+                                    </div>
                                 </div>
                             </div>
                         @empty
@@ -260,10 +454,12 @@
                 <article class="pos-panel bg-slate-950 text-white">
                     <div class="flex items-center justify-between">
                         <h3 class="text-lg font-semibold">Asset inventaris</h3>
-                        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">FIFO batches</span>
+                        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">FIFO
+                            batches</span>
                     </div>
                     <div class="mt-5 text-3xl font-semibold">Rp {{ number_format($stockValue, 0, ',', '.') }}</div>
-                    <div class="mt-3 text-sm text-slate-300">Estimasi nilai stok berdasarkan total batch pembelian yang masuk ke sistem.</div>
+                    <div class="mt-3 text-sm text-slate-300">Estimasi nilai stok berdasarkan total batch pembelian yang
+                        masuk ke sistem.</div>
                 </article>
             </div>
         </section>
@@ -273,9 +469,11 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Aktivitas PPOB terbaru</h3>
-                        <p class="mt-1 text-sm text-slate-500">Pantau provider, produk, dan status transaksi digital pada periode yang dipilih.</p>
+                        <p class="mt-1 text-sm text-slate-500">Pantau provider, produk, dan status transaksi digital
+                            pada periode yang dipilih.</p>
                     </div>
-                    <a href="{{ route('ppob.transactions.index') }}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">Buka modul</a>
+                    <a href="{{ route('ppob.transactions.index') }}"
+                        class="text-sm font-semibold text-blue-600 hover:text-blue-700">Buka modul</a>
                 </div>
 
                 <div class="mt-5 space-y-3">
@@ -283,17 +481,23 @@
                         <div class="rounded-[22px] border border-slate-200 bg-white px-4 py-4">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <div class="font-semibold text-slate-950">{{ $transaction->product?->name ?? 'Produk PPOB' }}</div>
-                                    <div class="mt-1 text-sm text-slate-500">{{ $transaction->provider?->name ?? 'Provider' }} | {{ $transaction->branch?->name ?? 'Cabang' }}</div>
+                                    <div class="font-semibold text-slate-950">
+                                        {{ $transaction->product?->name ?? 'Produk PPOB' }}</div>
+                                    <div class="mt-1 text-sm text-slate-500">
+                                        {{ $transaction->provider?->name ?? 'Provider' }} |
+                                        {{ $transaction->branch?->name ?? 'Cabang' }}</div>
                                 </div>
-                                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $transaction->status === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">
+                                <span
+                                    class="rounded-full px-3 py-1 text-xs font-semibold {{ $transaction->status === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">
                                     {{ strtoupper($transaction->status) }}
                                 </span>
                             </div>
-                            <div class="mt-3 text-sm font-semibold text-slate-950">Rp {{ number_format((float) $transaction->amount, 0, ',', '.') }}</div>
+                            <div class="mt-3 text-sm font-semibold text-slate-950">Rp
+                                {{ number_format((float) $transaction->amount, 0, ',', '.') }}</div>
                         </div>
                     @empty
-                        <div class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                        <div
+                            class="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
                             Belum ada transaksi PPOB yang tercatat.
                         </div>
                     @endforelse
@@ -304,22 +508,18 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-950">Roadmap modul inti</h3>
-                        <p class="mt-1 text-sm text-slate-500">Checklist fitur yang sudah terwakili oleh fondasi aplikasi.</p>
+                        <p class="mt-1 text-sm text-slate-500">Checklist fitur yang sudah terwakili oleh fondasi
+                            aplikasi.</p>
                     </div>
-                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Modular</span>
+                    <span
+                        class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Modular</span>
                 </div>
 
                 <div class="mt-5 grid gap-3">
-                    @foreach ([
-                        'Manajemen cabang dengan isolasi stok dan harga per branch',
-                        'FIFO purchase batches untuk perhitungan HPP dan profit',
-                        'POS engine untuk penjualan, transaksi, dan histori',
-                        'PPOB provider, katalog produk, dan transaksi',
-                        'CRM pelanggan serta histori poin loyalty',
-                        'Dynamic settings untuk preferensi operasional toko',
-                    ] as $feature)
+                    @foreach (['Manajemen cabang dengan isolasi stok dan harga per branch', 'FIFO purchase batches untuk perhitungan HPP dan profit', 'POS engine untuk penjualan, transaksi, dan histori', 'PPOB provider, katalog produk, dan transaksi', 'CRM pelanggan serta histori poin loyalty', 'Dynamic settings untuk preferensi operasional toko'] as $feature)
                         <div class="flex items-start gap-3 rounded-[22px] bg-slate-50 px-4 py-4">
-                            <span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">OK</span>
+                            <span
+                                class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">OK</span>
                             <span class="text-sm leading-6 text-slate-700">{{ $feature }}</span>
                         </div>
                     @endforeach
@@ -329,7 +529,7 @@
     </div>
 
     <script>
-        (function () {
+        (function() {
             const periodInput = document.getElementById('period');
             const startDateInput = document.getElementById('start_date');
             const endDateInput = document.getElementById('end_date');

@@ -14,6 +14,7 @@ class PurchaseController extends Controller
 {
     public function index()
     {
+        $branchIds = $this->accessibleBranchIds();
         $purchases = $this->scopeToAccessibleBranches(
             Purchase::with(['supplier', 'branch', 'batches.product'])->orderByDesc('purchase_date')
         )->get();
@@ -22,7 +23,13 @@ class PurchaseController extends Controller
             'purchases' => $purchases,
             'suppliers' => Supplier::orderBy('name')->get(),
             'branches' => $this->accessibleBranches()->get(),
-            'products' => Product::orderBy('name')->get(),
+            'products' => Product::with(['branches' => fn ($query) => $query->whereIn('branch_id', $branchIds)])
+                ->where(function ($query) use ($branchIds) {
+                    $query->whereHas('branches', fn ($branchQuery) => $branchQuery->whereIn('branch_id', $branchIds))
+                        ->orWhereDoesntHave('branches');
+                })
+                ->orderBy('name')
+                ->get(),
             'purchaseSummary' => [
                 'count' => $purchases->count(),
                 'total' => (float) $purchases->sum('total'),
@@ -52,6 +59,7 @@ class PurchaseController extends Controller
             'reference' => 'PUR/' . now()->format('Ymd') . '/' . str_pad((string) (Purchase::count() + 1), 4, '0', STR_PAD_LEFT),
             'supplier_id' => $request->supplier_id,
             'branch_id' => $request->branch_id,
+            'created_by' => auth()->id(),
             'purchase_date' => $request->purchase_date,
             'subtotal' => $total,
             'tax' => $tax,
